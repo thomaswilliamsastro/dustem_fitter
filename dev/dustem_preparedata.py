@@ -94,14 +94,19 @@ filters = ['WISE3_4','IRAC3_6','IRAC4_5',
            'WISE4_6','IRAC5_8','IRAC8','WISE12',
            'WISE22','MIPS24','MIPS70','PACS100',
            'PACS160','SPIRE250','SPIRE350',
-           'SPIRE500','planck353']
+           'SPIRE500','planck353',
+           'SCUBA2_450']
 
 d = {'name':'M33',
      'dist':840}
 
 for i in range(len(filters)):
-
-    d[filters[i]] = [obs_flux[i]]
+    try:
+        d[filters[i]] = [obs_flux[i]]
+        d[filters[i]+'_err'] = [extra_err[i]]
+    except:
+        d[filters[i]] = ['']
+        d[filters[i]+'_err'] = ['']
 
 df = pd.DataFrame(data=d)
 
