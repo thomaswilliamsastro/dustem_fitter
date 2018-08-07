@@ -23,33 +23,36 @@ def execute(cmd):
 os.chdir('/home/daedalusdata/c1625914/dustem/data')
 
 alpha = np.arange(2.6,5.41,0.01)
+isrf = np.arange(-1,3.51,0.01)
 
 for i in alpha:
-    with open('GRAIN_orig.DAT', 'r') as file :
-        filedata = file.read()
-    
-        # Replace the target string
-        filedata = filedata.replace('5.00','%.2f' % i)
+    for j in isrf:
+        with open('GRAIN_orig.DAT', 'r') as file :
+            filedata = file.read()
         
-        # Write the file out again
-        with open('GRAIN.DAT', 'w') as file:
-            file.write(filedata)
-    
-    #Write a script to run the DustEM code
-    
-    script_file = open('run.sh','w+')
-    script_file.write('#!/bin/csh\n')
-    script_file.write('#\n')   
-    script_file.write('/home/daedalusdata/c1625914/dustem/src/dustem\n')    
-    script_file.write('mv /home/daedalusdata/c1625914/dustem/out/SED.RES /home/daedalusdata/c1625914/dustem/out/themis_grid/SED_%.2f.RES' %i)  
-    
-    script_file.close()
-    
-    st = os.stat('./run.sh')
-    os.chmod('./run.sh', st.st_mode | stat.S_IEXEC)
-     
-    for path in execute(["./run.sh"]):
-        print(path, end="")
+            # Replace the target string
+            filedata = filedata.replace('5.00','%.2f' % i)
+            filedata = filedata.replace('1.000000','%.6f' % 10**j)
+            
+            # Write the file out again
+            with open('GRAIN.DAT', 'w') as file:
+                file.write(filedata)
+        
+        #Write a script to run the DustEM code
+        
+        script_file = open('run.sh','w+')
+        script_file.write('#!/bin/csh\n')
+        script_file.write('#\n')   
+        script_file.write('../src/dustem\n')    
+        script_file.write('mv /home/daedalusdata/c1625914/dustem/out/SED.RES /home/daedalusdata/c1625914/dustem_fitter/dev/grid/SED_%.2f_%.2f.RES' %(i,j))  
+        
+        script_file.close()
+        
+        st = os.stat('./run.sh')
+        os.chmod('./run.sh', st.st_mode | stat.S_IEXEC)
+          
+        for path in execute(["./run.sh"]):
+            print(path, end="")
     
       
 print('Complete!')
