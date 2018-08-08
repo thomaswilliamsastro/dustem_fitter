@@ -1,0 +1,38 @@
+								<mix type="DustMix">
+									   <ConfigurableDustMix writeMix="true" writeMeanMix="true" writeSize="true">
+													  <populations type="DustMixPopulation">
+														  <DustMixPopulation numGrainSizes="25">
+															  <composition type="GrainComposition">
+																  <AmHydrocarbonGrainComposition/>
+															  </composition>
+															  <sizeDistribution type="GrainSizeDistribution">
+																  <ModifiedPowerLawGrainSizeDistribution proportionalityFactor="[y_sCM20]" minSize="0.0004 micron" maxSize="4.9 micron" powerLawIndex="[alpha]" turnOffPoint="0.01 micron" scaleExponentialDecay="0.05 micron" exponentExponentialDecay="1" scaleCurvature="0.0001 micron" strengthCurvature="0" exponentCurvature="0"/>
+															  </sizeDistribution>
+														  </DustMixPopulation>
+														  <DustMixPopulation numGrainSizes="25">
+															  <composition type="GrainComposition">
+																  <AmHydrocarbonGrainComposition/>
+															  </composition>
+															  <sizeDistribution type="GrainSizeDistribution">
+																  <LogNormalGrainSizeDistribution proportionalityFactor="[y_lCM20]" minSize="0.0005 micron" maxSize="4.9 micron" centroid="0.007 micron" width="1"/>
+															  </sizeDistribution>
+														  </DustMixPopulation>
+														  <DustMixPopulation numGrainSizes="25">
+															 <composition type="GrainComposition">
+																  <ForsteriteGrainComposition grainType="Amorphous"/>
+															  </composition>
+															  <sizeDistribution type="GrainSizeDistribution">
+																  <LogNormalGrainSizeDistribution proportionalityFactor="[y_aSilM5]" minSize="0.001 micron" maxSize="4.9 micron" centroid="0.008 micron" width="1"/>
+															  </sizeDistribution>
+														  </DustMixPopulation>
+														  <DustMixPopulation numGrainSizes="25">
+															  <composition type="GrainComposition">
+																  <EnstatiteGrainComposition grainType="Amorphous"/>
+															  </composition>
+															  <sizeDistribution type="GrainSizeDistribution">
+																  <LogNormalGrainSizeDistribution proportionalityFactor="[y_aSilM5]" minSize="0.001 micron" maxSize="4.9 micron" centroid="0.008 micron" width="1"/>
+															  </sizeDistribution>
+														  </DustMixPopulation>
+													  </populations>
+										   </ConfigurableDustMix>                
+								</mix>

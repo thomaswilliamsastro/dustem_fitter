@@ -18,7 +18,6 @@ import corner
 import os
 import dill
 import tarfile
-import shutil
 from multiprocessing import Pool
 import pandas as pd
 
@@ -27,6 +26,7 @@ from scipy.constants import h,k,c
 import emcee
 import time
 import datetime
+from tqdm import tqdm
 
 def read_sed(isrf,
              alpha):
@@ -35,20 +35,26 @@ def read_sed(isrf,
     #combination of ISRF strength and alpha 
     #(rounded to nearest 0.01)
     
-    wavelength,\
-        small_grains,\
-        large_grains,\
-        pyroxine,\
-        olivine, = np.loadtxt('dustem_grid/SED_%.2f_%.2f.RES' % (alpha,isrf),
-                              unpack=True,
-                              skiprows=8,
-                              usecols=(0,1,2,3,4))
-        
-    silicates = pyroxine+olivine
+#     wavelength,\
+#         small_grains,\
+#         large_grains,\
+#         pyroxine,\
+#         olivine, = np.loadtxt('dustem_grid/SED_%.2f.RES' % (alpha),
+#                               unpack=True,
+#                               skiprows=8,
+#                               usecols=(0,1,2,3,4))
+#         
+#     silicates = pyroxine+olivine
+
+#     wavelength = sCM20_df['wavelength'].values.copy()
+
+    small_grains = sCM20_df['%.2f,0.00' % alpha].values.copy()
+    large_grains = lCM20_df['%.2f,0.00' % alpha].values.copy()
+    silicates = aSilM5_df['%.2f,0.00' % alpha].values.copy()
     
     #Convert these into units more like Jy -- divide by Hz
     
-    frequency = 3e8/(wavelength*1e-6)
+#     frequency = 3e8/(wavelength*1e-6)
     
     small_grains /= frequency
     large_grains /= frequency
@@ -56,9 +62,7 @@ def read_sed(isrf,
     
     return small_grains,large_grains,silicates
 
-def filter_convolve(wavelength,flux,
-                    filter_dict,
-                    keys):
+def filter_convolve(flux):
     
     #Convolve this SED with the various filters we have to give
     #a monochromatic flux
@@ -78,10 +82,7 @@ def filter_convolve(wavelength,flux,
 
 def lnprob(theta,
            obs_flux,obs_error,
-           keys,
-           filter_dict,
-           stars,
-           wavelength):
+           stars):
     
     lp = priors(theta)
     
@@ -89,10 +90,7 @@ def lnprob(theta,
         return -np.inf
     return lp + lnlike(theta,
                        obs_flux,obs_error,
-                       keys,
-                       filter_dict,
-                       stars,
-                       wavelength)
+                       stars)
 
 def priors(theta):
     
@@ -121,10 +119,7 @@ def priors(theta):
     
 def lnlike(theta,
            obs_flux,obs_error,
-           keys,
-           filter_dict,
-           stars,
-           wavelength):
+           stars):
     
     isrf,\
         omega_star,\
@@ -145,9 +140,7 @@ def lnlike(theta,
             dust_scaling*y_lCM20*large_grains+\
             dust_scaling*y_aSilM5*silicates+omega_star*stars
             
-    filter_fluxes = filter_convolve(wavelength,total,
-                                    filter_dict,
-                                    keys)
+    filter_fluxes = filter_convolve(total)
     
     chisq = np.nansum( (obs_flux-filter_fluxes)**2 / obs_error**2)
     
@@ -175,13 +168,11 @@ if skirt_output and not os.path.exists('skirt_output'):
 if dustem_output and not os.path.exists('dustem_output'):
     os.mkdir('dustem_output')
     
-#Decompress the DustEM grid
+#Read in the DustEM grid
 
-if not os.path.exists('dustem_grid'):
-    os.mkdir('dustem_grid')
-
-with tarfile.open('dustem_grid.tar.gz') as tar:
-    tar.extractall(path='dustem_grid')
+sCM20_df = pd.read_hdf('dustem_res.h5','sCM20')
+lCM20_df = pd.read_hdf('dustem_res.h5','lCM20')
+aSilM5_df = pd.read_hdf('dustem_res.h5','aSilM5')
 
 #Read in the Pandas dataframes
 
@@ -190,11 +181,12 @@ filter_df = pd.read_csv('filters.csv')
 
 #Define the wavelength grid (given by the dustEM output)
 
-wavelength,default_total = np.loadtxt('dustem_grid/SED_5.00_0.00.RES',
-                                      unpack=True,
-                                      skiprows=8,
-                                      usecols=(0,-1))
-frequency = c/(wavelength*1e-6)
+wavelength = sCM20_df['wavelength'].values.copy()
+frequency = 3e8/(wavelength*1e-6)
+
+default_total = sCM20_df['5.00,0.00'].values.copy()+\
+                lCM20_df['5.00,0.00'].values.copy()+\
+                aSilM5_df['5.00,0.00'].values.copy()
 
 #Create a dictionary of the filters
 
@@ -214,8 +206,6 @@ for gal_row in range(len(flux_df)):
     
     distance = flux_df['dist'][gal_row]
     gal_name = flux_df['name'][gal_row]
-    
-    print('Fitting '+gal_name)
     
     #Pull out fluxes, flux errors and wavebands
     
@@ -269,6 +259,9 @@ for gal_row in range(len(flux_df)):
     #Read in the pickle jar if it exists, else do the fitting
     
     if os.path.exists('samples/'+gal_name+'_samples.hkl'):
+        
+        print('Reading in '+gal_name+' pickle jar')
+        
         with open('samples/'+gal_name+'_samples.hkl', 'rb') as samples_dj:
             samples = dill.load(samples_dj)    
             
@@ -310,7 +303,8 @@ for gal_row in range(len(flux_df)):
                         y_aSilM5_var,
                         dust_scaling_var])
             
-        #Run this MCMC.
+        #Run this MCMC. Since emcee pickles any arguments passed to it, use as few
+        #as possible and rely on global variables instead!
         
         pool = Pool()
         
@@ -318,29 +312,24 @@ for gal_row in range(len(flux_df)):
                                         ndim, 
                                         lnprob, 
                                         args=(obs_flux,obs_error,
-                                              keys,
-                                              filter_dict,
-                                              stars,
-                                              wavelength),
+                                              stars),
                                         pool=pool)
          
         #500 steps for the 500 walkers, but throw away
         #the first 250 as a burn-in
         
         nsteps = 500
-        for i,result in enumerate(sampler.sample(pos,
-                                                 iterations=nsteps)):
+        for i,result in tqdm(enumerate(sampler.sample(pos,
+                                                  iterations=nsteps)),
+                             total=nsteps,
+                             desc='Fitting '+gal_name):
             pos,probability,state = result
-            print('MCMC run {:.1f}%'.format(float(i)*100/nsteps)+' complete',
-                  end='\r')
             
         pool.close()
             
         samples = sampler.chain[:, 250:, :].reshape((-1, ndim))
         
-        print(str(datetime.datetime.now())+': MCMC Complete! Took %.2fs' % (time.time() - start_time))
-        
-        # Save Gaussian Process Regressor to dill pickle jar
+        # Save samples to dill pickle jar
         with open('samples/'+gal_name+'_samples.hkl', 'wb') as samples_dj:
             dill.dump(samples, samples_dj)
     
@@ -427,9 +416,7 @@ for gal_row in range(len(flux_df)):
             
     #Calculate residuals
                
-    flux_model = filter_convolve(wavelength,total,
-                                 filter_dict,
-                                 keys)
+    flux_model = filter_convolve(total)
     
     residuals = (obs_flux-flux_model)/obs_flux
     residual_err = obs_error/obs_flux
@@ -591,7 +578,7 @@ for gal_row in range(len(flux_df)):
                           m_lCM20[0],
                           m_aSilM5[0],
                           m_dust[0]],
-                  range=[0.995,0.995,0.995,0.995,0.995,0.995],
+                  range=[0.995,0.995,0.995,0.995,0.995,0.995,0.995],
                   truth_color='k')
     
     # plt.show()
@@ -610,7 +597,7 @@ for gal_row in range(len(flux_df)):
         with open('GRAIN_orig.DAT', 'r') as file :
             filedata = file.read()
             
-            filedata = filedata.replace('1.000000','%.6f' % 10**isrf[0])
+            filedata = filedata.replace('[1.000000]','%.6f' % 10**isrf[0])
             filedata = filedata.replace('[0.170E-02]', '%.3E' % (0.17e-2*y_sCM20[0]))
             filedata = filedata.replace('[-5.00E-00]', '%.2E' % (alpha[0]))
             filedata = filedata.replace('[0.630E-03]', '%.3E' % (0.63e-3*y_lCM20[0]))
@@ -622,10 +609,73 @@ for gal_row in range(len(flux_df)):
                 
     if skirt_output:
         
-        print('NOT YET IMPLEMENTED')
-              
-    #Clear up the dustEM grid folder
-    
-    shutil.rmtree('dustem_grid')
+        #Default, unchanging parameters
+        
+        #sCM20
+        
+        m_h = 1.6737236e-27
+        amin = 0.0004e-6
+        amax = 4.9e-6
+        a_t = 0.e-6
+        a_c = 0.05e-6
+        a_u = 0.0001e-6
+        gamma = 1
+        zeta = 0
+        eta = 0
+        C = 1.717e-43
+        rho_sCM20 = 1.6
+        rho_sCM20 *= 100**3/1000
+        
+        a = np.linspace(amin,amax,1000)
+        
+        #lCM20
+        
+        a0_lCM20 = 0.007e-6
+        rho_lCM20 = 1.57
+        rho_lCM20 *= 100**3/1000
+        
+        #aSilM5
+        
+        a0_aSilM5 = 0.008e-6
+        rho_aSilM5 = 2.19
+        rho_aSilM5 *= 100**3/1000
+        
+        #Calculate new proportionality factors
+                
+        idx = np.where(a<=a_t)        
+        f_ed = np.zeros(len(a))       
+        f_ed = np.exp(-((a-a_t)/a_c)**gamma)        
+        f_ed[idx] = 1        
+        f_cv = (1+np.abs(zeta) * (a/a_u)**eta )**np.sign(zeta)       
+        omega_a_sCM20 = a**-alpha[0] * f_ed * f_cv        
+        m_d_n_h = 4/3*np.pi*rho_sCM20*np.trapz(a**3*omega_a_sCM20,a)
+        
+        prop_factor_sCM20 = y_sCM20[0]*0.17e-2/(m_d_n_h/m_h)
+        
+        
+        omega_a_lCM20 = a**-1 * np.exp(-0.5*np.log(a/a0_lCM20)**2)        
+        m_d_n_h = 4/3*np.pi*rho_lCM20*np.trapz(a**3*omega_a_lCM20,a)
+        
+        prop_factor_lCM20 = y_lCM20[0]*0.63e-3/(m_d_n_h/m_h)
+        
+        
+        omega_a_aSilM5 = a**-1 * np.exp(-0.5*np.log(a/a0_aSilM5)**2)
+        m_d_n_h = 4/3*np.pi*rho_aSilM5*np.trapz(a**3*omega_a_aSilM5,a)
 
-print('Code Complete! Took %.2fs' % (time.time() - start_time))
+        prop_factor_aSilM5 = y_aSilM5[0]*0.255e-2/(m_d_n_h/m_h)
+        
+        #Write these new values out
+        
+        with open('template.ski', 'r') as file :
+            filedata = file.read()
+            
+            filedata = filedata.replace('[alpha]','-%.1f' % (alpha[0]))
+            filedata = filedata.replace('[y_sCM20]','%.11e' % (prop_factor_sCM20))
+            filedata = filedata.replace('[y_lCM20]','%.11e' % (prop_factor_lCM20))
+            filedata = filedata.replace('[y_aSilM5]','%.11e' % (prop_factor_aSilM5))
+            
+            # Write the converted file out
+            with open('skirt_output/template_'+gal_name+'.ski', 'w') as file:
+                file.write(filedata)
+
+print('Code complete, took %.2fm' % ( (time.time() - start_time)/60 ))
