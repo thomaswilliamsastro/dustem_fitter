@@ -9,10 +9,32 @@ import pandas as pd
 import numpy as np
 import copy
 
-filters = ['IRAC3_6','IRAC4_5','IRAC5_8','IRAC8',
-           'MIPS24','MIPS70',
-           'PACS70','PACS100','PACS160',
-           'SPIRE250','SPIRE350','SPIRE500']
+filters = ['Spitzer_3.6',
+           'Spitzer_4.5',
+           'Spitzer_5.8',
+           'Spitzer_8.0',
+           'Spitzer_24',
+           'Spitzer_70',
+           'Spitzer_160',
+           'WISE_3.4',
+           'WISE_4.6',     
+           'WISE_12',
+           'WISE_22',
+           'PACS_70',
+           'PACS_100',
+           'PACS_160',
+           'SPIRE_250',
+           'SPIRE_350',
+           'SPIRE_500',
+           'Planck_350',
+           'Planck_550',
+           'Planck_850',
+           'SCUBA2_450',
+           'SCUBA2_850',
+           'IRAS_12',
+           'IRAS_25',
+           'IRAS_60',
+           'IRAS_100']
 
 df = pd.DataFrame(0,index=np.arange(len(filters)),columns=filters)
 
@@ -26,52 +48,53 @@ df['name'] = pd.Series(filters)
 
 idx = df[df['name'].str.contains('IRAC')].index
 
-df['IRAC3_6'][idx] = 0.018*2
-df['IRAC4_5'][idx] = 0.019*2
-df['IRAC5_8'][idx] = 0.02*2
-df['IRAC8'][idx] = 0.021*2
+df['Spitzer_3.6'][idx] = 0.018*2
+df['Spitzer_4.5'][idx] = 0.019*2
+df['Spitzer_5.8'][idx] = 0.02*2
+df['Spitzer_8.0'][idx] = 0.021*2
 
 #MIPS uncertainties. From Engelbrach+ (2007) and Gordon+ (2007),
 #these are 2% at 24micron and 5% at 70micron
 
 idx = df[df['name'].str.contains('MIPS')].index
 
-df['MIPS24'][idx] = 0.02*2
-df['MIPS70'][idx] = 0.05*2
+df['Spitzer_24'][idx] = 0.02*2
+df['Spitzer_70'][idx] = 0.05*2
+df['Spitzer_160'][idx] = 0.05*2
 
 #PACS uncertainties. These are 2% (Muller+ 2011; Balog+ 2014)
 
 idx = df[df['name'].str.contains('PACS')].index 
-df['PACS70'][idx] = 0.02*2
-df['PACS100'][idx] = 0.02*2
-df['PACS160'][idx] = 0.02*2
+df['PACS_70'][idx] = 0.02*2
+df['PACS_100'][idx] = 0.02*2
+df['PACS_160'][idx] = 0.02*2
 
 #SPIRE uncertainties. These are 4% (Bendo+ 2013; Griffin+ 2013)
 
 idx = df[df['name'].str.contains('SPIRE')].index 
-df['SPIRE250'][idx] = 0.04*2
-df['SPIRE350'][idx] = 0.04*2
-df['SPIRE500'][idx] = 0.04*2
+df['SPIRE_250'][idx] = 0.04*2
+df['SPIRE_350'][idx] = 0.04*2
+df['SPIRE_500'][idx] = 0.04*2
 
 print(df)
 
 df.to_csv('/home/daedalusdata/c1625914/dustem_fitter/corr_uncert.csv')
 
-flux = {'IRAC3_6':1,
-        'IRAC4_5':1,
-        'IRAC5_8':1,
-        'IRAC8':1}
-
-corr_err = np.matrix(np.zeros([len(flux),len(flux)]))
-
-keys = []
-
-for key in flux:
-    keys.append(key)
- 
-for i in range(len(flux)):
-    for j in range(len(flux)):
-         
-        corr_err[i,j] = flux[keys[i]]*flux[keys[j]]* \
-                            df[keys[j]][df.index[df['name'] == keys[j]][0]]* \
-                            df[keys[i]][df.index[df['name'] == keys[i]][0]]
+# flux = {'IRAC3_6':1,
+#         'IRAC4_5':1,
+#         'IRAC5_8':1,
+#         'IRAC8':1}
+# 
+# corr_err = np.matrix(np.zeros([len(flux),len(flux)]))
+# 
+# keys = []
+# 
+# for key in flux:
+#     keys.append(key)
+#  
+# for i in range(len(flux)):
+#     for j in range(len(flux)):
+#          
+#         corr_err[i,j] = flux[keys[i]]*flux[keys[j]]* \
+#                             df[keys[j]][df.index[df['name'] == keys[j]][0]]* \
+#                             df[keys[i]][df.index[df['name'] == keys[i]][0]]

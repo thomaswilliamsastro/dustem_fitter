@@ -35,32 +35,39 @@ def read_sed(isrf,
     #combination of ISRF strength and alpha 
     #(rounded to nearest 0.01)
     
-#     wavelength,\
-#         small_grains,\
-#         large_grains,\
-#         pyroxine,\
-#         olivine, = np.loadtxt('dustem_grid/SED_%.2f.RES' % (alpha),
-#                               unpack=True,
-#                               skiprows=8,
-#                               usecols=(0,1,2,3,4))
-#         
-#     silicates = pyroxine+olivine
+    if '%.2f' % isrf in ['-0.00']:
+        isrf = np.abs(isrf)
 
-#     wavelength = sCM20_df['wavelength'].values.copy()
-
-    small_grains = sCM20_df['%.2f,0.00' % alpha].values.copy()
-    large_grains = lCM20_df['%.2f,0.00' % alpha].values.copy()
-    silicates = aSilM5_df['%.2f,0.00' % alpha].values.copy()
+    small_grains = sCM20_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
+    large_grains = lCM20_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
+    silicates = aSilM5_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
     
     #Convert these into units more like Jy -- divide by Hz
-    
-#     frequency = 3e8/(wavelength*1e-6)
     
     small_grains /= frequency
     large_grains /= frequency
     silicates /= frequency
     
     return small_grains,large_grains,silicates
+
+def filter_convolve_not_fit(flux,
+                            keys):
+    
+    #Convolve this SED with the various filters we have to give
+    #a monochromatic flux
+ 
+    filter_fluxes = []
+    
+    for key in keys:
+                 
+        #Convolve MBB with filter
+        
+        filter_flux = np.interp(filter_dict[key][0],wavelength,flux)
+                 
+        filter_fluxes.append( np.abs( (np.trapz(filter_dict[key][1]*filter_flux,filter_dict[key][0])/
+                                      np.trapz(filter_dict[key][1],filter_dict[key][0])) ) )
+    
+    return np.array(filter_fluxes)
 
 def filter_convolve(flux):
     
@@ -142,7 +149,43 @@ def lnlike(theta,
             
     filter_fluxes = filter_convolve(total)
     
-    chisq = np.nansum( (obs_flux-filter_fluxes)**2 / obs_error**2)
+    #Build up a matrix for the various uncertainties
+    
+    rms_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+    
+    for i in range(len(obs_error)):
+        rms_err[i,i] = obs_error[i]**2
+        
+    #Uncorrelated calibration errors
+        
+    uncorr_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+    
+    i = 0
+    
+    for key in keys:
+        
+        uncorr_err[i,i] = (filter_df[key][1]*obs_flux[i])**2
+        
+        i += 1
+        
+    #And finally, correlated calibration errors
+    
+    corr_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+    
+    for i in range(len(obs_flux)):
+        for j in range(len(obs_flux)):
+            
+            corr_err[i,j] = obs_flux[i]*obs_flux[j]* \
+                            corr_uncert_df[keys[j]][corr_uncert_df.index[corr_uncert_df['name'] == keys[j]][0]]* \
+                            corr_uncert_df[keys[i]][corr_uncert_df.index[corr_uncert_df['name'] == keys[i]][0]]
+    
+    total_err = rms_err+uncorr_err+corr_err
+    
+    flux_diff = (filter_fluxes-obs_flux)[np.newaxis]
+    
+    chisq = flux_diff*total_err.I*flux_diff.T
+    
+#     chisq = np.nansum( (obs_flux-filter_fluxes)**2 / obs_error**2)
     
     likelihood = -0.5*chisq
     
@@ -178,6 +221,7 @@ aSilM5_df = pd.read_hdf('dustem_res.h5','aSilM5')
 
 flux_df = pd.read_csv('fluxes.csv')
 filter_df = pd.read_csv('filters.csv')
+corr_uncert_df = pd.read_csv('corr_uncert.csv')
 
 #Define the wavelength grid (given by the dustEM output)
 
@@ -204,7 +248,7 @@ for filter_name in filter_df.dtypes.index[1:]:
 
 for gal_row in range(len(flux_df)):
     
-    distance = flux_df['dist'][gal_row]
+    distance = flux_df['dist_best'][gal_row]
     gal_name = flux_df['name'][gal_row]
     
     #Pull out fluxes, flux errors and wavebands
@@ -214,16 +258,34 @@ for gal_row in range(len(flux_df)):
     obs_error = []
     keys = []
     
+    obs_wavelength_not_fit = []
+    obs_flux_not_fit = []
+    obs_error_not_fit = []
+    keys_not_fit = []
+    
     for key in filter_dict:
         
         try:
                         
             if np.isnan(flux_df[key][gal_row]) == False:
                 
-                obs_wavelength.append(filter_df[key][0])
-                obs_flux.append(flux_df[key][gal_row])
-                obs_error.append(flux_df[key+'_err'][gal_row])
-                keys.append(key)
+                if flux_df[key][gal_row] > 0:
+                    
+                    #Fit only the data with no flags
+                    
+                    if pd.isnull(flux_df[key+'_flag'][gal_row]):
+                
+                        obs_wavelength.append(filter_df[key][0])
+                        obs_flux.append(flux_df[key][gal_row])
+                        obs_error.append(flux_df[key+'_err'][gal_row])
+                        keys.append(key)
+                        
+                    else:
+                        
+                        obs_wavelength_not_fit.append(filter_df[key][0])
+                        obs_flux_not_fit.append(flux_df[key][gal_row])
+                        obs_error_not_fit.append(flux_df[key+'_err'][gal_row])
+                        keys_not_fit.append(key)                        
                 
         except KeyError:
             pass
@@ -232,21 +294,58 @@ for gal_row in range(len(flux_df)):
     obs_flux = np.array(obs_flux)
     obs_error = np.array(obs_error)
     
+    obs_wavelength_not_fit = np.array(obs_wavelength_not_fit)
+    obs_flux_not_fit = np.array(obs_flux_not_fit)
+    obs_error_not_fit = np.array(obs_error_not_fit)
+    
+    #Only fit if we cover the entire SED adequately. This means either 3.4
+    #or 3.6, Spizer 8 or WISE 12 or IRAS 12, MIPS 24 or WISE 22 or IRAS 25,
+    #MIPS 70 or PACS 70 or IRAS 60, PACS 100 or IRAS 100, MIPS 160 or PACS 160,
+    #SPIRE 250, SPIRE 350 or Planck 350, SPIRE 500 or Planck 550.
+    
+    if 'Spitzer_3.6' not in keys and 'WISE_3.4' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    if 'Spitzer_8.0' not in keys and 'WISE_12' not in keys and 'IRAS_12' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    if 'Spitzer_24' not in keys and 'WISE_22' not in keys and 'IRAS_25' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    if 'Spitzer_70' not in keys and 'PACS_70' not in keys and 'IRAS_60' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    if 'PACS_100' not in keys and 'IRAS_100' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    if 'Spitzer_160' not in keys and 'PACS_160' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    if 'SPIRE_250' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    if 'SPIRE_350' not in keys and 'Planck_350' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    if 'SPIRE_500' not in keys and 'Planck_550' not in keys:
+        print('Insufficient points to fit '+gal_name)
+        continue
+    
     #Create a blackbody of 5000K to represent the stars, and lock this
     #at the 3.6micron IRAC flux (or the 3.4 WISE flux if not available)
     
     stars = 2*h*frequency**3/c**2 * (np.exp( (h*frequency)/(k*5000) ) -1)**-1
     
     try:
-        if not np.isnan(flux_df['IRAC3_6'][gal_row]):
+        if not np.isnan(flux_df['Spitzer_3.6'][gal_row]):
             idx = np.where(np.abs(wavelength-3.6) == np.min(np.abs(wavelength-3.6)))
-            ratio = flux_df['IRAC3_6'][gal_row]/stars[idx]
+            ratio = flux_df['Spitzer_3.6'][gal_row]/stars[idx]
         else:
             idx = np.where(np.abs(wavelength-3.4) == np.min(np.abs(wavelength-3.4)))
-            ratio = flux_df['WISE3_4'][gal_row]/stars[idx]
+            ratio = flux_df['WISE_3.4'][gal_row]/stars[idx]
     except KeyError:
         idx = np.where(np.abs(wavelength-3.4) == np.min(np.abs(wavelength-3.4)))
-        ratio = flux_df['WISE3_4'][gal_row]/stars[idx]
+        ratio = flux_df['WISE_3.4'][gal_row]/stars[idx]
     
     stars *= ratio
     
@@ -254,7 +353,7 @@ for gal_row in range(len(flux_df)):
     #to the 250 micron flux
     
     idx = np.where(np.abs(wavelength-250) == np.min(np.abs(wavelength-250)))
-    initial_dust_scaling = flux_df['SPIRE250'][gal_row]/default_total[idx] * (3e8/250e-6)
+    initial_dust_scaling = flux_df['SPIRE_250'][gal_row]/default_total[idx] * (3e8/250e-6)
     
     #Read in the pickle jar if it exists, else do the fitting
     
@@ -424,16 +523,97 @@ for gal_row in range(len(flux_df)):
     residuals = np.array(residuals)*100
     residual_err = np.array(residual_err)*100
     
+    #And residuals for the points not fitted
+    
+    flux_model_not_fit = filter_convolve_not_fit(total,
+                                                 keys_not_fit)
+    
+    residuals_not_fit = (obs_flux_not_fit-flux_model_not_fit)/obs_flux_not_fit
+    residual_err_not_fit = obs_error_not_fit/obs_flux_not_fit
+        
+    residuals_not_fit = np.array(residuals_not_fit)*100
+    residual_err_not_fit = np.array(residual_err_not_fit)*100
+    
     fig1 = plt.figure(figsize=(10,6))
     frame1 = fig1.add_axes((.1,.3,.8,.6))
     
-    #Plot the best fit and errorbars
+    #Plot the best fit and errorbars. The flux errors here are only
+    #RMS, so include overall calibration from Chris' paper
+    
+    for i in range(len(keys)):
+        
+        calib_uncert = {'Spitzer_3.6':0.03,
+                        'Spitzer_4.5':0.03,
+                        'Spitzer_5.8':0.03,
+                        'Spitzer_8.0':0.03,
+                        'Spitzer_24':0.05,
+                        'Spitzer_70':0.1,
+                        'Spitzer_160':0.12,
+                        'WISE_3.4':0.029,
+                        'WISE_4.6':0.034,     
+                        'WISE_12':0.046,
+                        'WISE_22':0.056,
+                        'PACS_70':0.07,
+                        'PACS_100':0.07,
+                        'PACS_160':0.07,
+                        'SPIRE_250':0.055,
+                        'SPIRE_350':0.055,
+                        'SPIRE_500':0.055,
+                        'Planck_350':0.064,
+                        'Planck_550':0.061,
+                        'Planck_850':0.0078,
+                        'SCUBA2_450':0.12,
+                        'SCUBA2_850':0.08,
+                        'IRAS_12':0.2,
+                        'IRAS_25':0.2,
+                        'IRAS_60':0.2,
+                        'IRAS_100':0.2}[keys[i]]
+        
+        obs_error[i] += calib_uncert*obs_flux[i]
+        
+    for i in range(len(keys_not_fit)):
+        
+        calib_uncert = {'Spitzer_3.6':0.03,
+                        'Spitzer_4.5':0.03,
+                        'Spitzer_5.8':0.03,
+                        'Spitzer_8.0':0.03,
+                        'Spitzer_24':0.05,
+                        'Spitzer_70':0.1,
+                        'Spitzer_160':0.12,
+                        'WISE_3.4':0.029,
+                        'WISE_4.6':0.034,     
+                        'WISE_12':0.046,
+                        'WISE_22':0.056,
+                        'PACS_70':0.07,
+                        'PACS_100':0.07,
+                        'PACS_160':0.07,
+                        'SPIRE_250':0.055,
+                        'SPIRE_350':0.055,
+                        'SPIRE_500':0.055,
+                        'Planck_350':0.064,
+                        'Planck_550':0.061,
+                        'Planck_850':0.0078,
+                        'SCUBA2_450':0.12,
+                        'SCUBA2_850':0.08,
+                        'IRAS_12':0.2,
+                        'IRAS_25':0.2,
+                        'IRAS_60':0.2,
+                        'IRAS_100':0.2}[keys_not_fit[i]]
+        
+        obs_error_not_fit[i] += calib_uncert*obs_flux_not_fit[i]
     
     #Observed fluxes
     
     plt.errorbar(obs_wavelength,obs_flux,
                  yerr=obs_error,
                  c='k',
+                 ls='none',
+                 marker='.')
+    
+    plt.errorbar(obs_wavelength_not_fit,
+                 obs_flux_not_fit,
+                 yerr=obs_error_not_fit,
+                 c='r',
                  ls='none',
                  marker='.')
     
@@ -493,6 +673,9 @@ for gal_row in range(len(flux_df)):
     frame2=fig1.add_axes((.1,.1,.8,.2))
     
     plt.errorbar(obs_wavelength,residuals,yerr=residual_err,c='k',marker='.',
+                 ls='none')
+    plt.errorbar(obs_wavelength_not_fit,residuals_not_fit,
+                 yerr=residual_err_not_fit,c='r',marker='.',
                  ls='none')
     
     plt.axhline(0,ls='--',c='k')
