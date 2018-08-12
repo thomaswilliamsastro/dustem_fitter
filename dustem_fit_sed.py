@@ -809,7 +809,7 @@ for gal_row in range(len(flux_df)):
         rho_sCM20 = 1.6
         rho_sCM20 *= 100**3/1000
         
-        a = np.linspace(amin,amax,1000)
+        a = np.linspace(amin,amax,100000)
         
         #lCM20
         
