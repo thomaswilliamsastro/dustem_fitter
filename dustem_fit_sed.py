@@ -195,10 +195,11 @@ start_time = time.time()
 os.chdir(os.getcwd())
 
 #Define whether we want to output skirt dust code snippets and dustEM
-#GRAIN.dat files
+#GRAIN.dat files. Also if we want to plot
 
 skirt_output = True
 dustem_output = True
+plot = True
 
 #Create folders for sample pickle jars and plots, if they don't exits
 
@@ -431,59 +432,61 @@ for gal_row in range(len(flux_df)):
         # Save samples to dill pickle jar
         with open('samples/'+gal_name+'_samples.hkl', 'wb') as samples_dj:
             dill.dump(samples, samples_dj)
+            
+    if plot:
     
-    #For error plotting later
-    
-    y_to_percentile_stars = []
-    y_to_percentile_small = []
-    y_to_percentile_large = []
-    y_to_percentile_silicates = []
-    y_to_percentile_total = []
-    
-    for isrf,\
-        omega_star,\
-        alpha,\
-        y_sCM20,\
-        y_lCM20,\
-        y_aSilM5,\
-        dust_scaling in samples[np.random.randint(len(samples), size=150)]:
-               
-        small_grains,\
-            large_grains,\
-            silicates = read_sed(isrf,
-                                 alpha)
+        #For error plotting later
         
-        x,y = plt.plot(wavelength,omega_star*stars)[0].get_data()    
-        y_to_percentile_stars.append(y)
+        y_to_percentile_stars = []
+        y_to_percentile_small = []
+        y_to_percentile_large = []
+        y_to_percentile_silicates = []
+        y_to_percentile_total = []
         
-        x,y = plt.plot(wavelength,y_sCM20*small_grains*dust_scaling)[0].get_data()    
-        y_to_percentile_small.append(y)
-        
-        x,y = plt.plot(wavelength,y_lCM20*large_grains*dust_scaling)[0].get_data()    
-        y_to_percentile_large.append(y)
-        
-        x,y = plt.plot(wavelength,y_aSilM5*silicates*dust_scaling)[0].get_data()    
-        y_to_percentile_silicates.append(y)
-        plt.close()
-        
-    y_upper_stars = np.percentile(y_to_percentile_stars,84,
-                                  axis=0)
-    y_lower_stars = np.percentile(y_to_percentile_stars,16,
-                                  axis=0)
-    y_upper_small = np.percentile(y_to_percentile_small,84,
-                                  axis=0)
-    y_lower_small = np.percentile(y_to_percentile_small,16,
-                                  axis=0)
-    y_upper_large = np.percentile(y_to_percentile_large,84,
-                                  axis=0)
-    y_lower_large = np.percentile(y_to_percentile_large,16,
-                                  axis=0)
-    y_upper_silicates = np.percentile(y_to_percentile_silicates,84,
-                                  axis=0)
-    y_lower_silicates = np.percentile(y_to_percentile_silicates,16,
-                                  axis=0)
-    y_upper = y_upper_stars+y_upper_small+y_upper_large+y_upper_silicates
-    y_lower = y_lower_stars+y_lower_small+y_lower_large+y_lower_silicates
+        for isrf,\
+            omega_star,\
+            alpha,\
+            y_sCM20,\
+            y_lCM20,\
+            y_aSilM5,\
+            dust_scaling in samples[np.random.randint(len(samples), size=150)]:
+                   
+            small_grains,\
+                large_grains,\
+                silicates = read_sed(isrf,
+                                     alpha)
+            
+            x,y = plt.plot(wavelength,omega_star*stars)[0].get_data()    
+            y_to_percentile_stars.append(y)
+            
+            x,y = plt.plot(wavelength,y_sCM20*small_grains*dust_scaling)[0].get_data()    
+            y_to_percentile_small.append(y)
+            
+            x,y = plt.plot(wavelength,y_lCM20*large_grains*dust_scaling)[0].get_data()    
+            y_to_percentile_large.append(y)
+            
+            x,y = plt.plot(wavelength,y_aSilM5*silicates*dust_scaling)[0].get_data()    
+            y_to_percentile_silicates.append(y)
+            plt.close()
+            
+        y_upper_stars = np.percentile(y_to_percentile_stars,84,
+                                      axis=0)
+        y_lower_stars = np.percentile(y_to_percentile_stars,16,
+                                      axis=0)
+        y_upper_small = np.percentile(y_to_percentile_small,84,
+                                      axis=0)
+        y_lower_small = np.percentile(y_to_percentile_small,16,
+                                      axis=0)
+        y_upper_large = np.percentile(y_to_percentile_large,84,
+                                      axis=0)
+        y_lower_large = np.percentile(y_to_percentile_large,16,
+                                      axis=0)
+        y_upper_silicates = np.percentile(y_to_percentile_silicates,84,
+                                      axis=0)
+        y_lower_silicates = np.percentile(y_to_percentile_silicates,16,
+                                      axis=0)
+        y_upper = y_upper_stars+y_upper_small+y_upper_large+y_upper_silicates
+        y_lower = y_lower_stars+y_lower_small+y_lower_large+y_lower_silicates
     
     #Calculate the percentiles
     
@@ -500,205 +503,224 @@ for gal_row in range(len(flux_df)):
                        percentiles[1]-percentiles[0]),
                        percentiles)
         
-    #From this, get the median fit lines
-
-    small_grains,\
-        large_grains,\
-        silicates = read_sed(isrf[0],
-                             alpha[0]) 
+    if plot:
+        
+        #From this, get the median fit lines
     
-    #Now scale everything!
-    
-    total = dust_scaling[0]*y_sCM20[0]*small_grains+\
-            dust_scaling[0]*y_lCM20[0]*large_grains+\
-            dust_scaling[0]*y_aSilM5[0]*silicates+omega_star[0]*stars
+        small_grains,\
+            large_grains,\
+            silicates = read_sed(isrf[0],
+                                 alpha[0]) 
+        
+        #Now scale everything!
+        
+        total = dust_scaling[0]*y_sCM20[0]*small_grains+\
+                dust_scaling[0]*y_lCM20[0]*large_grains+\
+                dust_scaling[0]*y_aSilM5[0]*silicates+omega_star[0]*stars
+                
+        #Calculate residuals
+                   
+        flux_model = filter_convolve(total)
+        
+        residuals = (obs_flux-flux_model)/obs_flux
+        residual_err = obs_error/obs_flux
             
-    #Calculate residuals
-               
-    flux_model = filter_convolve(total)
-    
-    residuals = (obs_flux-flux_model)/obs_flux
-    residual_err = obs_error/obs_flux
+        residuals = np.array(residuals)*100
+        residual_err = np.array(residual_err)*100
         
-    residuals = np.array(residuals)*100
-    residual_err = np.array(residual_err)*100
-    
-    #And residuals for the points not fitted
-    
-    flux_model_not_fit = filter_convolve_not_fit(total,
-                                                 keys_not_fit)
-    
-    residuals_not_fit = (obs_flux_not_fit-flux_model_not_fit)/obs_flux_not_fit
-    residual_err_not_fit = obs_error_not_fit/obs_flux_not_fit
+        #And residuals for the points not fitted
         
-    residuals_not_fit = np.array(residuals_not_fit)*100
-    residual_err_not_fit = np.array(residual_err_not_fit)*100
-    
-    fig1 = plt.figure(figsize=(10,6))
-    frame1 = fig1.add_axes((.1,.3,.8,.6))
-    
-    #Plot the best fit and errorbars. The flux errors here are only
-    #RMS, so include overall calibration from Chris' paper
-    
-    for i in range(len(keys)):
+        flux_model_not_fit = filter_convolve_not_fit(total,
+                                                     keys_not_fit)
         
-        calib_uncert = {'Spitzer_3.6':0.03,
-                        'Spitzer_4.5':0.03,
-                        'Spitzer_5.8':0.03,
-                        'Spitzer_8.0':0.03,
-                        'Spitzer_24':0.05,
-                        'Spitzer_70':0.1,
-                        'Spitzer_160':0.12,
-                        'WISE_3.4':0.029,
-                        'WISE_4.6':0.034,     
-                        'WISE_12':0.046,
-                        'WISE_22':0.056,
-                        'PACS_70':0.07,
-                        'PACS_100':0.07,
-                        'PACS_160':0.07,
-                        'SPIRE_250':0.055,
-                        'SPIRE_350':0.055,
-                        'SPIRE_500':0.055,
-                        'Planck_350':0.064,
-                        'Planck_550':0.061,
-                        'Planck_850':0.0078,
-                        'SCUBA2_450':0.12,
-                        'SCUBA2_850':0.08,
-                        'IRAS_12':0.2,
-                        'IRAS_25':0.2,
-                        'IRAS_60':0.2,
-                        'IRAS_100':0.2}[keys[i]]
+        residuals_not_fit = (obs_flux_not_fit-flux_model_not_fit)/obs_flux_not_fit
+        residual_err_not_fit = obs_error_not_fit/obs_flux_not_fit
+            
+        residuals_not_fit = np.array(residuals_not_fit)*100
+        residual_err_not_fit = np.array(residual_err_not_fit)*100
         
-        obs_error[i] += calib_uncert*obs_flux[i]
+        residual_upper = (y_upper-total)*100/total
+        residual_lower = (y_lower-total)*100/total
         
-    for i in range(len(keys_not_fit)):
+        fig1 = plt.figure(figsize=(10,6))
+        frame1 = fig1.add_axes((.1,.3,.8,.6))
         
-        calib_uncert = {'Spitzer_3.6':0.03,
-                        'Spitzer_4.5':0.03,
-                        'Spitzer_5.8':0.03,
-                        'Spitzer_8.0':0.03,
-                        'Spitzer_24':0.05,
-                        'Spitzer_70':0.1,
-                        'Spitzer_160':0.12,
-                        'WISE_3.4':0.029,
-                        'WISE_4.6':0.034,     
-                        'WISE_12':0.046,
-                        'WISE_22':0.056,
-                        'PACS_70':0.07,
-                        'PACS_100':0.07,
-                        'PACS_160':0.07,
-                        'SPIRE_250':0.055,
-                        'SPIRE_350':0.055,
-                        'SPIRE_500':0.055,
-                        'Planck_350':0.064,
-                        'Planck_550':0.061,
-                        'Planck_850':0.0078,
-                        'SCUBA2_450':0.12,
-                        'SCUBA2_850':0.08,
-                        'IRAS_12':0.2,
-                        'IRAS_25':0.2,
-                        'IRAS_60':0.2,
-                        'IRAS_100':0.2}[keys_not_fit[i]]
+        #Plot the best fit and errorbars. The flux errors here are only
+        #RMS, so include overall calibration from Chris' paper
         
-        obs_error_not_fit[i] += calib_uncert*obs_flux_not_fit[i]
-    
-    #Observed fluxes
-    
-    plt.errorbar(obs_wavelength,obs_flux,
-                 yerr=obs_error,
-                 c='k',
-                 ls='none',
-                 marker='.')
-    
-    plt.errorbar(obs_wavelength_not_fit,
-                 obs_flux_not_fit,
-                 yerr=obs_error_not_fit,
+        for i in range(len(keys)):
+            
+            calib_uncert = {'Spitzer_3.6':0.03,
+                            'Spitzer_4.5':0.03,
+                            'Spitzer_5.8':0.03,
+                            'Spitzer_8.0':0.03,
+                            'Spitzer_24':0.05,
+                            'Spitzer_70':0.1,
+                            'Spitzer_160':0.12,
+                            'WISE_3.4':0.029,
+                            'WISE_4.6':0.034,     
+                            'WISE_12':0.046,
+                            'WISE_22':0.056,
+                            'PACS_70':0.07,
+                            'PACS_100':0.07,
+                            'PACS_160':0.07,
+                            'SPIRE_250':0.055,
+                            'SPIRE_350':0.055,
+                            'SPIRE_500':0.055,
+                            'Planck_350':0.064,
+                            'Planck_550':0.061,
+                            'Planck_850':0.0078,
+                            'SCUBA2_450':0.12,
+                            'SCUBA2_850':0.08,
+                            'IRAS_12':0.2,
+                            'IRAS_25':0.2,
+                            'IRAS_60':0.2,
+                            'IRAS_100':0.2}[keys[i]]
+            
+            obs_error[i] += calib_uncert*obs_flux[i]
+            
+        for i in range(len(keys_not_fit)):
+            
+            calib_uncert = {'Spitzer_3.6':0.03,
+                            'Spitzer_4.5':0.03,
+                            'Spitzer_5.8':0.03,
+                            'Spitzer_8.0':0.03,
+                            'Spitzer_24':0.05,
+                            'Spitzer_70':0.1,
+                            'Spitzer_160':0.12,
+                            'WISE_3.4':0.029,
+                            'WISE_4.6':0.034,     
+                            'WISE_12':0.046,
+                            'WISE_22':0.056,
+                            'PACS_70':0.07,
+                            'PACS_100':0.07,
+                            'PACS_160':0.07,
+                            'SPIRE_250':0.055,
+                            'SPIRE_350':0.055,
+                            'SPIRE_500':0.055,
+                            'Planck_350':0.064,
+                            'Planck_550':0.061,
+                            'Planck_850':0.0078,
+                            'SCUBA2_450':0.12,
+                            'SCUBA2_850':0.08,
+                            'IRAS_12':0.2,
+                            'IRAS_25':0.2,
+                            'IRAS_60':0.2,
+                            'IRAS_100':0.2}[keys_not_fit[i]]
+            
+            obs_error_not_fit[i] += calib_uncert*obs_flux_not_fit[i]
+        
+        #THEMIS models
+        
+        plt.fill_between(wavelength,y_lower_stars,y_upper_stars,
+                         facecolor='m', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.3)
+        plt.fill_between(wavelength,y_lower_small,y_upper_small,
+                         facecolor='b', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.3)
+        plt.fill_between(wavelength,y_lower_large,y_upper_large,
+                         facecolor='g', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.3)
+        plt.fill_between(wavelength,y_lower_silicates,y_upper_silicates,
+                         facecolor='r', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.3)
+        plt.fill_between(wavelength,y_lower,y_upper,
+                         facecolor='k', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.4)
+        
+        plt.plot(wavelength,omega_star[0]*stars,
+                 c='m',
+                 ls='--',
+                 label='Stars')
+        plt.plot(wavelength,y_sCM20[0]*small_grains*dust_scaling[0],
+                 c='b',
+                 ls='-.',
+                 label='sCM20')
+        plt.plot(wavelength,y_lCM20[0]*large_grains*dust_scaling[0],
+                 c='g',
+                 dashes=[2,2,2,2],
+                 label='lCM20')
+        plt.plot(wavelength,y_aSilM5[0]*silicates*dust_scaling[0],
                  c='r',
-                 ls='none',
-                 marker='.')
-    
-    #THEMIS models
-    
-    plt.fill_between(wavelength,y_lower_stars,y_upper_stars,
-                     facecolor='m', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.3)
-    plt.fill_between(wavelength,y_lower_small,y_upper_small,
-                     facecolor='b', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.3)
-    plt.fill_between(wavelength,y_lower_large,y_upper_large,
-                     facecolor='g', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.3)
-    plt.fill_between(wavelength,y_lower_silicates,y_upper_silicates,
-                     facecolor='r', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.3)
-    plt.fill_between(wavelength,y_lower,y_upper,
-                     facecolor='k', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.4)
-    
-    plt.plot(wavelength,omega_star[0]*stars,
-             c='m',
-             label='Stars')
-    plt.plot(wavelength,y_sCM20[0]*small_grains*dust_scaling[0],
-             c='b',
-             label='sCM20')
-    plt.plot(wavelength,y_lCM20[0]*large_grains*dust_scaling[0],
-             c='g',
-             label='lCM20')
-    plt.plot(wavelength,y_aSilM5[0]*silicates*dust_scaling[0],
-             c='r',
-             label='aSilM5')
-    plt.plot(wavelength,total,
-             c='k',
-             label='Total')
-    
-    plt.xscale('log')
-    plt.yscale('log')
-    
-    plt.xlim([1,1000])
-    plt.ylim([0.5*10**np.floor(np.log10(np.min(obs_flux))-1),
-              10**np.ceil(np.log10(np.max(obs_flux))+1)])
-    
-    plt.legend(loc='upper left',
-               frameon=False)
-    
-    plt.ylabel(r'$F_\nu$ (Jy)',
-               fontsize=14)
-    
-    plt.yticks(fontsize=14)
-    
-    plt.tick_params(labelbottom=False)
-    
-    #Add in residuals
-    
-    frame2=fig1.add_axes((.1,.1,.8,.2))
-    
-    plt.errorbar(obs_wavelength,residuals,yerr=residual_err,c='k',marker='.',
-                 ls='none')
-    plt.errorbar(obs_wavelength_not_fit,residuals_not_fit,
-                 yerr=residual_err_not_fit,c='r',marker='.',
-                 ls='none')
-    
-    plt.axhline(0,ls='--',c='k')
-    
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    
-    plt.xscale('log')
-    
-    plt.xlabel(r'$\lambda$ ($\mu$m)',
-               fontsize=14)
-    plt.ylabel('Residual (%)',
-               fontsize=14)
-    
-    plt.xlim([1,1000])
-    plt.ylim([-100,100])
-    
-    plt.savefig('plots/'+gal_name+'_sed.png',
-                bbox_inches='tight',
-                dpi=150)
-    plt.savefig('plots/'+gal_name+'_sed.pdf',
-                bbox_inches='tight',
-                dpi=150)
+                 dashes=[5,2,10,2],
+                 label='aSilM5')
+        plt.plot(wavelength,total,
+                 c='k',
+                 label='Total')
+        
+        #Observed fluxes
+        
+        plt.errorbar(obs_wavelength,obs_flux,
+                     yerr=obs_error,
+                     c='k',
+                     ls='none',
+                     marker='.',
+                     zorder=99)
+        
+        plt.errorbar(obs_wavelength_not_fit,
+                     obs_flux_not_fit,
+                     yerr=obs_error_not_fit,
+                     c='r',
+                     ls='none',
+                     marker='.',
+                     zorder=98)
+        
+        plt.xscale('log')
+        plt.yscale('log')
+        
+        plt.xlim([1,1000])
+        plt.ylim([0.5*10**np.floor(np.log10(np.min(obs_flux))-1),
+                  10**np.ceil(np.log10(np.max(obs_flux))+1)])
+        
+        plt.legend(loc='upper left',
+                   fontsize=14,
+                   frameon=False)
+        
+        plt.ylabel(r'$F_\nu$ (Jy)',
+                   fontsize=14)
+        
+        plt.yticks(fontsize=14)
+        
+        plt.tick_params(labelbottom=False)
+        
+        #Add in residuals
+        
+        frame2=fig1.add_axes((.1,.1,.8,.2))
+        
+        #Include the one-sigma errors in the residuals
+        
+        plt.fill_between(wavelength,residual_lower,residual_upper,
+                         facecolor='k', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.4)
+        
+        plt.errorbar(obs_wavelength,residuals,yerr=residual_err,c='k',marker='.',
+                     ls='none',
+                     zorder=99)
+        plt.errorbar(obs_wavelength_not_fit,residuals_not_fit,
+                     yerr=residual_err_not_fit,c='r',marker='.',
+                     ls='none',
+                     zorder=98)
+        
+        plt.axhline(0,ls='--',c='k')
+        
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        
+        plt.xscale('log')
+        
+        plt.xlabel(r'$\lambda$ ($\mu$m)',
+                   fontsize=14)
+        plt.ylabel('Residual (%)',
+                   fontsize=14)
+        
+        plt.xlim([1,1000])
+        plt.ylim([-100,100])
+        
+        plt.savefig('plots/'+gal_name+'_sed.png',
+                    bbox_inches='tight',
+                    dpi=150)
+        plt.savefig('plots/'+gal_name+'_sed.pdf',
+                    bbox_inches='tight')
     
     #Corner plot -- convert the scaling factor to a hydrogen mass
     
@@ -744,34 +766,33 @@ for gal_row in range(len(flux_df)):
                        percentiles[2]-percentiles[1],
                        percentiles[1]-percentiles[0]),
                        percentiles)
+        
+    if plot:
     
-    corner.corner(samples, labels=[r'log$_{10}$ U',
-                                   r'$\Omega_\ast$',
-                                   r'$\alpha_\mathregular{sCM20}$',
-                                   r'log$_{10}$ M$_\mathregular{sCM20}$',
-                                   r'log$_{10}$ M$_\mathregular{lCM20}$',
-                                   r'log$_{10}$ M$_\mathregular{aSilM5}$',
-                                   r'log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)'],
-                  quantiles=[0.16,0.84],
-                  show_titles=True,
-                  truths=[isrf[0],
-                          omega_star[0],
-                          alpha[0],
-                          m_sCM20[0],
-                          m_lCM20[0],
-                          m_aSilM5[0],
-                          m_dust[0]],
-                  range=[0.995,0.995,0.995,0.995,0.995,0.995,0.995],
-                  truth_color='k')
-    
-    # plt.show()
-    
-    plt.savefig('plots/'+gal_name+'_corner.png',
-                bbox_inches='tight',
-                dpi=150)
-    plt.savefig('plots/'+gal_name+'_corner.pdf',
-                bbox_inches='tight',
-                dpi=150)
+        corner.corner(samples, labels=[r'log$_{10}$ U',
+                                       r'$\Omega_\ast$',
+                                       r'$\alpha_\mathregular{sCM20}$',
+                                       r'log$_{10}$ M$_\mathregular{sCM20}$',
+                                       r'log$_{10}$ M$_\mathregular{lCM20}$',
+                                       r'log$_{10}$ M$_\mathregular{aSilM5}$',
+                                       r'log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)'],
+                      quantiles=[0.16,0.84],
+                      show_titles=True,
+                      truths=[isrf[0],
+                              omega_star[0],
+                              alpha[0],
+                              m_sCM20[0],
+                              m_lCM20[0],
+                              m_aSilM5[0],
+                              m_dust[0]],
+                      range=[0.995,0.995,0.995,0.995,0.995,0.995,0.995],
+                      truth_color='k')
+        
+        plt.savefig('plots/'+gal_name+'_corner.png',
+                    bbox_inches='tight',
+                    dpi=150)
+        plt.savefig('plots/'+gal_name+'_corner.pdf',
+                    bbox_inches='tight')
     
     #Finally, write out code snippets for dustEM and SKIRT, if requested
     
