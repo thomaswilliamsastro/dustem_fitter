@@ -467,6 +467,12 @@ for gal_row in range(len(flux_df)):
             
             x,y = plt.plot(wavelength,y_aSilM5*silicates*dust_scaling)[0].get_data()    
             y_to_percentile_silicates.append(y)
+            
+            x,y = plt.plot(wavelength,dust_scaling*(y_sCM20*small_grains+\
+                                        y_lCM20*large_grains+\
+                                        y_aSilM5*silicates)+\
+                                        omega_star*stars)[0].get_data()
+            y_to_percentile_total.append(y)
             plt.close()
             
         y_upper_stars = np.percentile(y_to_percentile_stars,84,
@@ -485,9 +491,24 @@ for gal_row in range(len(flux_df)):
                                       axis=0)
         y_lower_silicates = np.percentile(y_to_percentile_silicates,16,
                                       axis=0)
-        y_upper = y_upper_stars+y_upper_small+y_upper_large+y_upper_silicates
-        y_lower = y_lower_stars+y_lower_small+y_lower_large+y_lower_silicates
-    
+        y_upper = np.percentile(y_to_percentile_total,84,
+                                axis=0)
+        y_lower = np.percentile(y_to_percentile_total,16,
+                                axis=0)
+        
+        #And calculate the median lines
+        
+        y_median_stars = np.percentile(y_to_percentile_stars,50,
+                                       axis=0)
+        y_median_small = np.percentile(y_to_percentile_small,50,
+                                       axis=0)
+        y_median_large = np.percentile(y_to_percentile_large,50,
+                                       axis=0)
+        y_median_silicates = np.percentile(y_to_percentile_silicates,50,
+                                           axis=0)
+        y_median_total = np.percentile(y_to_percentile_total,50,
+                                       axis=0)
+        
     #Calculate the percentiles
     
     percentiles =  zip(*np.percentile(samples, [16, 50, 84],axis=0))
@@ -504,23 +525,10 @@ for gal_row in range(len(flux_df)):
                        percentiles)
         
     if plot:
-        
-        #From this, get the median fit lines
-    
-        small_grains,\
-            large_grains,\
-            silicates = read_sed(isrf[0],
-                                 alpha[0]) 
-        
-        #Now scale everything!
-        
-        total = dust_scaling[0]*y_sCM20[0]*small_grains+\
-                dust_scaling[0]*y_lCM20[0]*large_grains+\
-                dust_scaling[0]*y_aSilM5[0]*silicates+omega_star[0]*stars
                 
         #Calculate residuals
                    
-        flux_model = filter_convolve(total)
+        flux_model = filter_convolve(y_median_total)
         
         residuals = (obs_flux-flux_model)/obs_flux
         residual_err = obs_error/obs_flux
@@ -530,7 +538,7 @@ for gal_row in range(len(flux_df)):
         
         #And residuals for the points not fitted
         
-        flux_model_not_fit = filter_convolve_not_fit(total,
+        flux_model_not_fit = filter_convolve_not_fit(y_median_total,
                                                      keys_not_fit)
         
         residuals_not_fit = (obs_flux_not_fit-flux_model_not_fit)/obs_flux_not_fit
@@ -539,8 +547,8 @@ for gal_row in range(len(flux_df)):
         residuals_not_fit = np.array(residuals_not_fit)*100
         residual_err_not_fit = np.array(residual_err_not_fit)*100
         
-        residual_upper = (y_upper-total)*100/total
-        residual_lower = (y_lower-total)*100/total
+        residual_upper = (y_upper-y_median_total)*100/y_median_total
+        residual_lower = (y_lower-y_median_total)*100/y_median_total
         
         fig1 = plt.figure(figsize=(10,6))
         frame1 = fig1.add_axes((.1,.3,.8,.6))
@@ -628,23 +636,23 @@ for gal_row in range(len(flux_df)):
                          facecolor='k', interpolate=True,lw=0.5,
                          edgecolor='none', alpha=0.4)
         
-        plt.plot(wavelength,omega_star[0]*stars,
+        plt.plot(wavelength,y_median_stars,
                  c='m',
                  ls='--',
                  label='Stars')
-        plt.plot(wavelength,y_sCM20[0]*small_grains*dust_scaling[0],
+        plt.plot(wavelength,y_median_small,
                  c='b',
                  ls='-.',
                  label='sCM20')
-        plt.plot(wavelength,y_lCM20[0]*large_grains*dust_scaling[0],
+        plt.plot(wavelength,y_median_large,
                  c='g',
                  dashes=[2,2,2,2],
                  label='lCM20')
-        plt.plot(wavelength,y_aSilM5[0]*silicates*dust_scaling[0],
+        plt.plot(wavelength,y_median_silicates,
                  c='r',
                  dashes=[5,2,10,2],
                  label='aSilM5')
-        plt.plot(wavelength,total,
+        plt.plot(wavelength,y_median_total,
                  c='k',
                  label='Total')
         
