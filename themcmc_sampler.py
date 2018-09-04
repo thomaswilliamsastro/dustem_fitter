@@ -4,7 +4,7 @@ THEMCMC sampler
 
 @author: Tom Williams
 
-v0.00.
+v1.00.
 """
 
 #Ensure python3 compatibility
@@ -16,6 +16,8 @@ import dill
 from tqdm import tqdm
 from scipy.constants import h,k,c
 import os
+from psutil import virtual_memory
+import sys
 
 #emcee-related imports
 
@@ -42,6 +44,13 @@ def sample(method,
     sCM20_df = pd.read_hdf('models.h5','sCM20')
     lCM20_df = pd.read_hdf('models.h5','lCM20')
     aSilM5_df = pd.read_hdf('models.h5','aSilM5')
+    
+    #Make sure the program doesn't run into swap
+    
+    ram_footprint = sys.getsizeof(sCM20_df)*4 #approx footprint (generous!)
+    mem = virtual_memory().total #total available RAM
+    
+    processes = int(np.floor(mem/ram_footprint))
     
     #Read in the useful Pandas dataframes
     
@@ -139,6 +148,8 @@ def sample(method,
             
     else:
         
+        print('Will fit using '+str(processes)+' processes')
+        
         pos = []
         nwalkers = 500
         
@@ -167,7 +178,42 @@ def sample(method,
             
                 pos.append([isrf_var,
                             omega_star_var,
-                            dust_scaling_var])           
+                            dust_scaling_var])  
+                
+        ####ALLOWING VARYING ABUNDANCES####
+        
+        if method == 'abundfree':
+            
+            #Set up the MCMC. We have 6 free parameters.
+            #ISRF strength,
+            #Stellar scaling,
+            #deviation from default abundance of the small- and large-carbon grains
+            #and silicates,
+            #and the overall scaling factor for the dust grains.
+            
+            #Set the initial guesses for the slope and abundances at the default 
+            #THEMIS parameters. The overall scaling is given by the ratio to 250 micron
+            #earlier, and since we've already normalised the stellar parameter set this
+            #to 1. The ISRF is 10^0, i.e. MW default.
+                     
+            ndim = 6
+             
+            for i in range(nwalkers):
+                
+                isrf_var = np.random.normal(loc=0,scale=1e-2)
+                omega_star_var = np.abs(np.random.normal(loc=1,scale=1e-2))
+                y_sCM20_var = np.abs(np.random.normal(loc=1,scale=1e-2))
+                y_lCM20_var = np.abs(np.random.normal(loc=1,scale=1e-2))
+                y_aSilM5_var = np.abs(np.random.normal(loc=1,scale=1e-2))
+                dust_scaling_var = np.abs(np.random.normal(loc=initial_dust_scaling,
+                                                           scale=initial_dust_scaling*1e-2))
+            
+                pos.append([isrf_var,
+                            omega_star_var,
+                            y_sCM20_var,
+                            y_lCM20_var,
+                            y_aSilM5_var,
+                            dust_scaling_var])     
 
         ####VARYING SMALL CARBON GRAIN SIZE DISTRIBUTION####
         
@@ -210,7 +256,7 @@ def sample(method,
         #Run this MCMC. Since emcee pickles any arguments passed to it, use as few
         #as possible and rely on global variables instead!
         
-        pool = Pool()
+        pool = Pool(processes)
         
         sampler = emcee.EnsembleSampler(nwalkers, 
                                         ndim, 
@@ -259,8 +305,19 @@ def lnlike(theta,
         y_sCM20 = 1
         y_lCM20 = 1
         y_aSilM5 = 1      
+        
+    if method == 'abundfree':
+        
+        isrf,\
+            omega_star,\
+            y_sCM20,\
+            y_lCM20,\
+            y_aSilM5,\
+            dust_scaling = theta     
+            
+        alpha = 5  
     
-    elif method == 'ascfree':
+    if method == 'ascfree':
     
         isrf,\
             omega_star,\
@@ -360,9 +417,20 @@ def priors(theta,
         alpha = 5
         y_sCM20 = 1
         y_lCM20 = 1
-        y_aSilM5 = 1          
+        y_aSilM5 = 1        
+        
+    if method == 'abundfree':
+        
+        isrf,\
+            omega_star,\
+            y_sCM20,\
+            y_lCM20,\
+            y_aSilM5,\
+            dust_scaling = theta    
+            
+        alpha = 5      
     
-    elif method == 'ascfree':
+    if method == 'ascfree':
     
         isrf,\
             omega_star,\

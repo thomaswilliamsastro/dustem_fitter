@@ -28,6 +28,7 @@ sys.path.append(os.getcwd())
 import themcmc_sampler
 import plotting
 import general
+import code_snippets
 
 #Set up the argument parser
 
@@ -35,11 +36,11 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
                                  description='THEMCMC optional settings.')
 parser.add_argument('--method',type=str,default='default',metavar='',
                     help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree'")
-parser.add_argument('--plot',type=bool,default=True,metavar='',
+parser.add_argument('--plot',action='store_true',default=False,
                     help="Plot SED and corner plot.")
-parser.add_argument('--skirtoutput',type=bool,default=False,metavar='',
+parser.add_argument('--skirtoutput',action='store_true',default=False,
                     help="Write out SKIRT mix code snippet. (N.B. does not work with multiu!)")
-parser.add_argument('--dustemoutput',type=bool,default=False,metavar='',
+parser.add_argument('--dustemoutput',action='store_true',default=False,
                     help="Write out DustEM GRAIN.dat file (N.B. does not work with multiu!).")
 parser.add_argument('--fluxes',type=str,default='fluxes',metavar='',
                     help="File containing 'fluxes'.csv to fit.")
@@ -143,6 +144,8 @@ if __name__ == "__main__":
             
         if args.plot:
             
+            print('Plotting')
+            
             plotting.plot_sed(method=args.method,
                               flux_df=flux_df,
                               filter_df=filter_df,
@@ -160,12 +163,18 @@ if __name__ == "__main__":
         
         if args.dustemoutput:
             
+            print('Writing DustEM GRAIN.dat file')
+            
             code_snippets.dustemoutput(method=args.method,
-                                       samples=samples)
+                                       samples=samples,
+                                       gal_name=gal_name)
                     
         if args.skirtoutput:
             
+            print('Writing SKIRT code snippet')
+            
             code_snippets.skirtoutput(method=args.method,
-                                      samples=samples)
+                                      samples=samples,
+                                      gal_name=gal_name)
     
     print('Code complete, took %.2fm' % ( (time.time() - start_time)/60 ))

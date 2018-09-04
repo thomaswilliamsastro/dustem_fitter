@@ -4,7 +4,7 @@ Plot commands for THEMCMC
 
 @author: Tom Williams
 
-v0.00.
+v1.00.
 """
 
 #Ensure python3 compatibility
@@ -113,8 +113,19 @@ def plot_sed(method,
             y_sCM20 = 1
             y_lCM20 = 1
             y_aSilM5 = 1
+            
+        if method == 'abundfree':
+
+            isrf,\
+                omega_star,\
+                y_sCM20,\
+                y_lCM20,\
+                y_aSilM5,\
+                dust_scaling = samples[np.random.randint(len(samples)),:]    
                 
-        elif method == 'ascfree':
+            alpha = 5       
+                
+        if method == 'ascfree':
             
             isrf,\
                 omega_star,\
@@ -385,8 +396,6 @@ def plot_corner(method,
     samples[:,-1] /= 2e30
     samples[:,-1] *= 4*np.pi
     
-    mass_h = samples[:,-1].copy()
-    
     #In all cases, the first 2 parts of samples are the ISRF and
     #the stellar scaling factor, which we don't have to do anything
     #to
@@ -403,18 +412,18 @@ def plot_corner(method,
     #In the cases where we vary abundances, turn this into a more meaningful
     #dust mass for each component
     
-    if method == 'ascfree':
+    if method in ['ascfree','abundfree']:
         
         corner_labels.append(r'log$_{10}$ M$_\mathregular{sCM20}$')
         corner_labels.append(r'log$_{10}$ M$_\mathregular{lCM20}$')
         corner_labels.append(r'log$_{10}$ M$_\mathregular{aSilM5}$')
         
-        samples[:,3] = dgr_sCM20*mass_h*samples[:,3]
-        samples[:,3] = np.log10(samples[:,3])
-        samples[:,4] = dgr_lCM20*mass_h*samples[:,4]
-        samples[:,4] = np.log10(samples[:,4])
-        samples[:,5] = dgr_aSilM5*mass_h*samples[:,5]
-        samples[:,5] = np.log10(samples[:,5])
+        samples[:,-4] = dgr_sCM20*samples[:,-1]*samples[:,-4]
+        samples[:,-4] = np.log10(samples[:,-4])
+        samples[:,-3] = dgr_lCM20*samples[:,-1]*samples[:,-3]
+        samples[:,-3] = np.log10(samples[:,-3])
+        samples[:,-2] = dgr_aSilM5*samples[:,-1]*samples[:,-2]
+        samples[:,-2] = np.log10(samples[:,-2])
         
     #Finally, for all cases the final column is total dust mass
     
@@ -426,11 +435,11 @@ def plot_corner(method,
                         samples[:,-1]*dgr_lCM20 + \
                         samples[:,-1]*dgr_aSilM5
         
-    elif method == 'ascfree':
+    if method in ['ascfree','abundfree']:
     
-        samples[:,-1] = samples[:,-1]*dgr_sCM20*samples[:,3] + \
-                        samples[:,-1]*dgr_lCM20*samples[:,4] + \
-                        samples[:,-1]*dgr_aSilM5*samples[:,5]
+        samples[:,-1] = 10**samples[:,-4] + \
+                        10**samples[:,-3] + \
+                        10**samples[:,-2]
     
     samples[:,-1] = np.log10(samples[:,-1])
     
