@@ -7,8 +7,20 @@ General useful functions
 v0.00.
 """
 
+#Ensure python3 compatibility
+from __future__ import absolute_import, print_function, division
+
+import numpy as np
+import pandas as pd
+
+from scipy.constants import h,k,c
+
 def read_sed(isrf,
-             alpha):
+             alpha,
+             sCM20_df,
+             lCM20_df,
+             aSilM5_df,
+             frequency):
     
     #Read in the SED that corresponds to this
     #combination of ISRF strength and alpha 
@@ -29,20 +41,29 @@ def read_sed(isrf,
     
     return small_grains,large_grains,silicates
 
-def filter_convolve(flux):
+def define_stars(flux_df,
+                 gal_row,
+                 frequency):
     
-    #Convolve this SED with the various filters we have to give
-    #a monochromatic flux
- 
-    filter_fluxes = []
+    #Create a blackbody of 5000K to represent the stars, and lock this
+    #at the 3.6micron IRAC flux (or the 3.4 WISE flux if not available)
     
-    for key in keys:
-                 
-        #Convolve MBB with filter
-        
-        filter_flux = np.interp(filter_dict[key][0],wavelength,flux)
-                 
-        filter_fluxes.append( np.abs( (np.trapz(filter_dict[key][1]*filter_flux,filter_dict[key][0])/
-                                      np.trapz(filter_dict[key][1],filter_dict[key][0])) ) )
+    stars = 2*h*frequency**3/c**2 * (np.exp( (h*frequency)/(k*5000) ) -1)**-1
     
-    return np.array(filter_fluxes)
+    wavelength = 3e8/frequency
+    wavelength *= 1e6
+    
+    try:
+        if not np.isnan(flux_df['Spitzer_3.6'][gal_row]):
+            idx = np.where(np.abs(wavelength-3.6) == np.min(np.abs(wavelength-3.6)))
+            ratio = flux_df['Spitzer_3.6'][gal_row]/stars[idx]
+        else:
+            idx = np.where(np.abs(wavelength-3.4) == np.min(np.abs(wavelength-3.4)))
+            ratio = flux_df['WISE_3.4'][gal_row]/stars[idx]
+    except KeyError:
+        idx = np.where(np.abs(wavelength-3.4) == np.min(np.abs(wavelength-3.4)))
+        ratio = flux_df['WISE_3.4'][gal_row]/stars[idx]
+    
+    stars *= ratio
+    
+    return stars

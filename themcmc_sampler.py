@@ -12,15 +12,15 @@ from __future__ import absolute_import, print_function, division
 
 import numpy as np
 import pandas as pd
+import dill
+from tqdm import tqdm
+from scipy.constants import h,k,c
+import os
 
 #emcee-related imports
 
 import emcee
 from multiprocessing import Pool
-
-from tqdm import tqdm
-from scipy.constants import h,k,c
-import os
 
 #THEMCMC imports
 
@@ -33,22 +33,22 @@ def sample(method,
            filter_file,
            gal_row):
     
+    #Read in models
+    
+    global sCM20_df,lCM20_df,aSilM5_df
+    
     #Read in the DustEM grid
     
-    global sCM20_df
     sCM20_df = pd.read_hdf('models.h5','sCM20')
-    global lCM20_df
     lCM20_df = pd.read_hdf('models.h5','lCM20')
-    global aSilM5_df
     aSilM5_df = pd.read_hdf('models.h5','aSilM5')
     
     #Read in the useful Pandas dataframes
     
-    global flux_df
+    global flux_df,filter_df,corr_uncert_df
+    
     flux_df = pd.read_csv(flux_file+'.csv')
-    global filter_df
     filter_df = pd.read_csv(filter_file+'.csv')
-    global corr_uncert_df
     corr_uncert_df = pd.read_csv('corr_uncert.csv')
     
     #Define the wavelength grid (given by the dustEM output)
@@ -78,7 +78,6 @@ def sample(method,
         
         filter_dict[filter_name] = filter_wavelength,transmission
         
-    distance = flux_df['dist_best'][gal_row]
     gal_name = flux_df['name'][gal_row]
     
     #Pull out fluxes and flux errors
@@ -119,23 +118,9 @@ def sample(method,
     obs_flux = np.array(obs_flux)
     obs_error = np.array(obs_error)
     
-    #Create a blackbody of 5000K to represent the stars, and lock this
-    #at the 3.6micron IRAC flux (or the 3.4 WISE flux if not available)
-    
-    stars = 2*h*frequency**3/c**2 * (np.exp( (h*frequency)/(k*5000) ) -1)**-1
-    
-    try:
-        if not np.isnan(flux_df['Spitzer_3.6'][gal_row]):
-            idx = np.where(np.abs(wavelength-3.6) == np.min(np.abs(wavelength-3.6)))
-            ratio = flux_df['Spitzer_3.6'][gal_row]/stars[idx]
-        else:
-            idx = np.where(np.abs(wavelength-3.4) == np.min(np.abs(wavelength-3.4)))
-            ratio = flux_df['WISE_3.4'][gal_row]/stars[idx]
-    except KeyError:
-        idx = np.where(np.abs(wavelength-3.4) == np.min(np.abs(wavelength-3.4)))
-        ratio = flux_df['WISE_3.4'][gal_row]/stars[idx]
-    
-    stars *= ratio
+    stars = general.define_stars(flux_df,
+                                 gal_row,
+                                 frequency)
     
     #Set an initial guess for the scaling variable. Lock this by a default THEMIS SED
     #to the 250 micron flux
@@ -145,14 +130,17 @@ def sample(method,
     
     #Read in the pickle jar if it exists, else do the fitting
     
-    if os.path.exists('samples/'+gal_name+'_samples_scfree.hkl'):
-        
+    if os.path.exists('samples/'+gal_name+'_samples_'+method+'.hkl'):
+         
         print('Reading in '+gal_name+' pickle jar')
-        
-        with open('samples/'+gal_name+'_samples_'+args.method+'.hkl', 'rb') as samples_dj:
+         
+        with open('samples/'+gal_name+'_samples_'+method+'.hkl', 'rb') as samples_dj:
             samples = dill.load(samples_dj)    
             
     else:
+        
+        pos = []
+        nwalkers = 500
         
         ####DEFAULT THEMIS MIX####
         
@@ -168,9 +156,7 @@ def sample(method,
             #earlier, and since we've already normalised the stellar parameter set this
             #to 1. The ISRF is 10^0, i.e. MW default.
                      
-            ndim,nwalkers = (3,500)
-             
-            pos = []
+            ndim = 3
              
             for i in range(nwalkers):
                 
@@ -185,7 +171,7 @@ def sample(method,
 
         ####VARYING SMALL CARBON GRAIN SIZE DISTRIBUTION####
         
-        if method == 'ascfree':
+        elif method == 'ascfree':
             
             #Set up the MCMC. We have 7 free parameters.
             #ISRF strength,
@@ -200,9 +186,7 @@ def sample(method,
             #earlier, and since we've already normalised the stellar parameter set this
             #to 1. The ISRF is 10^0, i.e. MW default.
                      
-            ndim,nwalkers = (7,500)
-             
-            pos = []
+            ndim = 7
              
             for i in range(nwalkers):
                 
@@ -255,7 +239,7 @@ def sample(method,
         with open('samples/'+gal_name+'_samples_'+method+'.hkl', 'wb') as samples_dj:
             dill.dump(samples, samples_dj)
             
-        return samples
+    return samples,filter_dict,keys
         
 #EMCEE-RELATED FUNCTIONS
 
@@ -276,7 +260,7 @@ def lnlike(theta,
         y_lCM20 = 1
         y_aSilM5 = 1      
     
-    if method == 'ascfree':
+    elif method == 'ascfree':
     
         isrf,\
             omega_star,\
@@ -289,7 +273,11 @@ def lnlike(theta,
     small_grains,\
         large_grains,\
         silicates = general.read_sed(isrf,
-                                     alpha)    
+                                     alpha,
+                                     sCM20_df,
+                                     lCM20_df,
+                                     aSilM5_df,
+                                     frequency)    
     
     #Scale everything accordingly
     
@@ -297,7 +285,7 @@ def lnlike(theta,
             dust_scaling*y_lCM20*large_grains+\
             dust_scaling*y_aSilM5*silicates+omega_star*stars
             
-    filter_fluxes = general.filter_convolve(total)
+    filter_fluxes = filter_convolve(total)
     
     #Build up a matrix for the various uncertainties
     
@@ -374,7 +362,7 @@ def priors(theta,
         y_lCM20 = 1
         y_aSilM5 = 1          
     
-    if method == 'ascfree':
+    elif method == 'ascfree':
     
         isrf,\
             omega_star,\
@@ -394,3 +382,21 @@ def priors(theta,
         return 0.0
     else:
         return -np.inf
+
+def filter_convolve(flux):
+    
+    #Convolve this SED with the various filters we have to give
+    #a monochromatic flux
+ 
+    filter_fluxes = []
+    
+    for key in keys:
+                 
+        #Convolve MBB with filter
+        
+        filter_flux = np.interp(filter_dict[key][0],wavelength,flux)
+                 
+        filter_fluxes.append( np.abs( (np.trapz(filter_dict[key][1]*filter_flux,filter_dict[key][0])/
+                                      np.trapz(filter_dict[key][1],filter_dict[key][0])) ) )
+    
+    return np.array(filter_fluxes)
