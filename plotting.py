@@ -29,8 +29,7 @@ def plot_sed(method,
              filter_df,
              gal_row,
              samples,
-             filter_dict,
-             keys):
+             filter_dict):
     
     gal_name = flux_df['name'][gal_row]
     
@@ -54,7 +53,8 @@ def plot_sed(method,
     obs_flux = []
     obs_error = []
     obs_wavelength = []
-    obs_flag = []
+    obs_flag = []    
+    keys = []
     
     for key in filter_dict:
         
@@ -72,18 +72,22 @@ def plot_sed(method,
                             obs_wavelength.append(filter_df[key][0])
                             obs_flux.append(flux_df[key][gal_row])
                             obs_error.append(flux_df[key+'_err'][gal_row])                     
-                            obs_flag.append(0)                           
+                            obs_flag.append(0)  
+                                                    
                         else:       
                             obs_wavelength.append(filter_df[key][0])
                             obs_flux.append(flux_df[key][gal_row])
                             obs_error.append(flux_df[key+'_err'][gal_row])                     
                             obs_flag.append(1)
                             
+                        keys.append(key) 
+                            
                     except:
                             obs_wavelength.append(filter_df[key][0])
                             obs_flux.append(flux_df[key][gal_row])
                             obs_error.append(flux_df[key+'_err'][gal_row])    
-                            obs_flag.append(0)                                  
+                            obs_flag.append(0)    
+                            keys.append(key)                              
                 
         except KeyError:
             pass

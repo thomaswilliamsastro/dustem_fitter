@@ -151,8 +151,7 @@ if __name__ == "__main__":
                               filter_df=filter_df,
                               gal_row=gal_row,
                               samples=samples,
-                              filter_dict=filter_dict,
-                              keys=keys)
+                              filter_dict=filter_dict)
             
             plotting.plot_corner(method=args.method,
                                  samples=samples,
