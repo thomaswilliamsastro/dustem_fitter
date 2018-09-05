@@ -45,13 +45,6 @@ def sample(method,
     lCM20_df = pd.read_hdf('models.h5','lCM20')
     aSilM5_df = pd.read_hdf('models.h5','aSilM5')
     
-    #Make sure the program doesn't run into swap
-    
-    ram_footprint = sys.getsizeof(sCM20_df)*4 #approx footprint (generous!)
-    mem = virtual_memory().total #total available RAM
-    
-    processes = int(np.floor(mem/ram_footprint))
-    
     #Read in the useful Pandas dataframes
     
     global flux_df,filter_df,corr_uncert_df
@@ -131,11 +124,11 @@ def sample(method,
                                  gal_row,
                                  frequency)
     
-    #Set an initial guess for the scaling variable. Lock this by a default THEMIS SED
-    #to the 250 micron flux
+    #Set an initial guess for the scaling variable. Lock this to the first flux we have
+    #available
     
-    idx = np.where(np.abs(wavelength-250) == np.min(np.abs(wavelength-250)))
-    initial_dust_scaling = flux_df['SPIRE_250'][gal_row]/default_total[idx] * (3e8/250e-6)
+    idx = np.where(np.abs(wavelength-filter_df[keys[0]][0]) == np.min(np.abs(wavelength-filter_df[keys[0]][0])))
+    initial_dust_scaling = obs_flux[0]/default_total[idx] * (3e8/(filter_df[keys[0]][0]*1e-6))
     
     #Read in the pickle jar if it exists, else do the fitting
     
@@ -147,6 +140,13 @@ def sample(method,
             samples = dill.load(samples_dj)    
             
     else:
+        
+        #Make sure the program doesn't run into swap
+    
+        ram_footprint = sys.getsizeof(sCM20_df)*4 #approx footprint (generous!)
+        mem = virtual_memory().total #total available RAM
+        
+        processes = int(np.floor(mem/ram_footprint))
         
         print('Will fit using '+str(processes)+' processes')
         

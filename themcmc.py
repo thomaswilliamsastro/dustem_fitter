@@ -144,36 +144,42 @@ if __name__ == "__main__":
             
         if args.plot:
             
-            print('Plotting '+gal_name)
+            if not os.path.isfile('plots/sed/'+gal_name+'_'+args.method+'.png'):
+                
+                print('Plotting '+gal_name)
             
-            plotting.plot_sed(method=args.method,
-                              flux_df=flux_df,
-                              filter_df=filter_df,
-                              gal_row=gal_row,
-                              samples=samples,
-                              filter_dict=filter_dict)
-            
-            plotting.plot_corner(method=args.method,
-                                 samples=samples,
-                                 gal_name=gal_name,
-                                 distance=dist)
+                plotting.plot_sed(method=args.method,
+                                  flux_df=flux_df,
+                                  filter_df=filter_df,
+                                  gal_row=gal_row,
+                                  samples=samples,
+                                  filter_dict=filter_dict)
+                
+                plotting.plot_corner(method=args.method,
+                                     samples=samples,
+                                     gal_name=gal_name,
+                                     distance=dist)
         
         #Finally, write out code snippets for dustEM and SKIRT, if requested
         
         if args.dustemoutput:
             
-            print('Writing DustEM GRAIN.dat file for '+gal_name)
+            if not os.path.isfile('dustem_output/GRAIN_'+gal_name+'_'+args.method+'.dat'):
             
-            code_snippets.dustemoutput(method=args.method,
-                                       samples=samples,
-                                       gal_name=gal_name)
+                print('Writing DustEM GRAIN.dat file for '+gal_name)
+                
+                code_snippets.dustemoutput(method=args.method,
+                                           samples=samples,
+                                           gal_name=gal_name)
                     
         if args.skirtoutput:
             
-            print('Writing SKIRT code snippet '+gal_name)
+            if not os.path.isfile('skirt_output/template_'+gal_name+'_'+arg.smethod+'.ski'):
             
-            code_snippets.skirtoutput(method=args.method,
-                                      samples=samples,
-                                      gal_name=gal_name)
+                print('Writing SKIRT code snippet '+gal_name)
+                
+                code_snippets.skirtoutput(method=args.method,
+                                          samples=samples,
+                                          gal_name=gal_name)
     
     print('Code complete, took %.2fm' % ( (time.time() - start_time)/60 ))
