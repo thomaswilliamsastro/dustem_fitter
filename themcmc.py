@@ -144,7 +144,7 @@ if __name__ == "__main__":
             
         if args.plot:
             
-            print('Plotting')
+            print('Plotting '+gal_name)
             
             plotting.plot_sed(method=args.method,
                               flux_df=flux_df,
@@ -162,7 +162,7 @@ if __name__ == "__main__":
         
         if args.dustemoutput:
             
-            print('Writing DustEM GRAIN.dat file')
+            print('Writing DustEM GRAIN.dat file for '+gal_name)
             
             code_snippets.dustemoutput(method=args.method,
                                        samples=samples,
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                     
         if args.skirtoutput:
             
-            print('Writing SKIRT code snippet')
+            print('Writing SKIRT code snippet '+gal_name)
             
             code_snippets.skirtoutput(method=args.method,
                                       samples=samples,
