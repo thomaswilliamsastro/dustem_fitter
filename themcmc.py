@@ -51,6 +51,8 @@ args = parser.parse_args()
 
 #Create folders for sample pickle jars and plots, if they don't exits
 
+os.chdir(os.getcwd())
+
 if not os.path.exists('plots'):
     os.mkdir('plots')
 if not os.path.exists('plots/sed'):
@@ -67,7 +69,6 @@ if not os.path.exists('dustem_output'):
 if __name__ == "__main__":
 
     start_time = time.time()
-    os.chdir(os.getcwd())
     
     #For each galaxy, read in fluxes and see if we have sufficient points to fit
     
