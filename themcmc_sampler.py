@@ -94,7 +94,8 @@ def sample(method,
         
         try:
                         
-            if np.isnan(flux_df[key][gal_row]) == False:
+            if np.isnan(flux_df[key][gal_row]) == False and \
+                np.isnan(flux_df[key+'_err'][gal_row]) == False:
                 
                 if flux_df[key][gal_row] > 0:
                     

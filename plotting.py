@@ -318,7 +318,7 @@ def plot_sed(method,
     
     plt.xlim([1,1000])
     plt.ylim([0.5*10**np.floor(np.log10(np.min(obs_flux[obs_flag == 0]))-1),
-              0.8*10**np.ceil(np.log10(np.max(obs_flux[obs_flag == 0]))+1)])
+              10**np.ceil(np.log10(np.max(obs_flux[obs_flag == 0]))+1)])
     
     plt.legend(loc='upper left',
                fontsize=14,

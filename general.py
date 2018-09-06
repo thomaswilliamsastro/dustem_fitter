@@ -4,7 +4,7 @@ General useful functions
 
 @author: Tom Williams
 
-v0.00.
+v1.00.
 """
 
 #Ensure python3 compatibility

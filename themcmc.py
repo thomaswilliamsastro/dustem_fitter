@@ -85,7 +85,8 @@ if __name__ == "__main__":
             
             try:
                             
-                if np.isnan(flux_df[filter_name][gal_row]) == False:
+                if np.isnan(flux_df[filter_name][gal_row]) == False and \
+                    np.isnan(flux_df[filter_name+'_err'][gal_row]) == False:
                     
                     if flux_df[filter_name][gal_row] > 0:
                         
