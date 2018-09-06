@@ -125,11 +125,12 @@ def sample(method,
                                  gal_row,
                                  frequency)
     
-    #Set an initial guess for the scaling variable. Lock this to the first flux we have
-    #available
+    #Set an initial guess for the scaling variable. Lock this to the SPIRE250 flux, which
+    #all galaxies must have
     
-    idx = np.where(np.abs(wavelength-filter_df[keys[0]][0]) == np.min(np.abs(wavelength-filter_df[keys[0]][0])))
-    initial_dust_scaling = obs_flux[0]/default_total[idx] * (3e8/(filter_df[keys[0]][0]*1e-6))
+    idx = np.where(np.abs(wavelength-filter_df['SPIRE_250'][0]) == np.min(np.abs(wavelength-filter_df['SPIRE_250'][0])))
+    
+    initial_dust_scaling = flux_df['SPIRE_250'][gal_row]/default_total[idx[0]] * (3e8/(250*1e-6))
     
     #Read in the pickle jar if it exists, else do the fitting
     

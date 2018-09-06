@@ -74,9 +74,9 @@ if __name__ == "__main__":
     flux_df = pd.read_csv(args.fluxes+'.csv')
     filter_df = pd.read_csv(args.filters+'.csv')
     
-    keys = []
-    
     for gal_row in range(len(flux_df)):
+          
+        keys = []
         
         gal_name = flux_df['name'][gal_row]
         dist = flux_df['dist_best'][gal_row]
