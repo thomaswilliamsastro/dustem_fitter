@@ -80,7 +80,7 @@ if __name__ == "__main__":
         keys = []
         
         gal_name = flux_df['name'][gal_row]
-        dist = flux_df['dist_best'][gal_row]
+        dist = flux_df['dist'][gal_row]
         
         for filter_name in filter_df.dtypes.index[1:]:
             

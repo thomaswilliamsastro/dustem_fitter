@@ -395,7 +395,7 @@ def plot_corner(method,
     #Start by converting the scaling factor to a hydrogen mass
     
     samples[:,-1] *= 1e-23
-    samples[:,-1] *= (distance*1000*3.0857e18)**2
+    samples[:,-1] *= (distance*1e6*3.0857e18)**2
     samples[:,-1] *= 1.67e-27
     samples[:,-1] /= 2e30
     samples[:,-1] *= 4*np.pi

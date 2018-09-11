@@ -146,7 +146,7 @@ def sample(method,
         #Make sure the program doesn't run into swap
     
         ram_footprint = sys.getsizeof(sCM20_df)*4 #approx footprint (generous!)
-        mem = virtual_memory().total #total available RAM
+        mem = virtual_memory().available #free available RAM
         
         processes = int(np.floor(mem/ram_footprint))
         
