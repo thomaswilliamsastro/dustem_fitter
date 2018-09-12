@@ -66,8 +66,6 @@ for i in tqdm(alpha,
         sCM20_df[identifier] = small_grains
         lCM20_df[identifier] = large_grains
         aSilM5_df[identifier] = pyroxine+olivine
-        
-print(sCM20_df['2.71,0.00'])
 
 sCM20_df.to_hdf('../models.h5',
                 mode='w',key='sCM20')
