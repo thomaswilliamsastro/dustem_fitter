@@ -69,11 +69,11 @@ for i in tqdm(alpha,
         
 print(sCM20_df['2.71,0.00'])
 
-sCM20_df.to_hdf('models.h5',
+sCM20_df.to_hdf('../models.h5',
                 mode='w',key='sCM20')
-lCM20_df.to_hdf('models.h5',
+lCM20_df.to_hdf('../models.h5',
                 key='lCM20')
-aSilM5_df.to_hdf('models.h5',
+aSilM5_df.to_hdf('../models.h5',
                 key='aSilM5')
 
 print('Complete!')
