@@ -29,51 +29,51 @@ for i in alpha:
         
         if i == alpha[0] and j == isrf[0]:
             
-            wavelength = np.loadtxt('SED_%.2f_%.2f.RES' % (i,j),
+            wavelength = np.loadtxt('grid/SED_%.2f_%.2f.RES' % (i,j),
                                     unpack=True,
                                     skiprows=8,
                                     usecols=(0))
-
-# for i in tqdm(alpha,
-#               desc='Total'):
-#     for j in tqdm(isrf,
-#                   leave=False,
-#                   desc='alpha=%.2f' % i):
-#     
-#         small_grains,\
-#             large_grains,\
-#             pyroxine,\
-#             olivine, = np.loadtxt('SED_%.2f_%.2f.RES' % (i,j),
-#                                   unpack=True,
-#                                   skiprows=8,
-#                                   usecols=(1,2,3,4))
-#             
-#         if i == alpha[0] and j == isrf[0]:
-#             sCM20_df['wavelength'] =  np.loadtxt('SED_%.2f_%.2f.RES' % (i,j),
-#                                                  unpack=True,
-#                                                  skiprows=8,
-#                                                  usecols=(0))
-#     
-#         identifier = '%.2f,%.2f' % (i,j)
-#         
-#         sCM20_df[identifier] = small_grains
-#         lCM20_df[identifier] = large_grains
-#         aSilM5_df[identifier] = pyroxine+olivine
         
 #Set up a pandas DataFrame for each component (small- and large-carbons,
 #and silicates)
 
 sCM20_df = pd.DataFrame(columns=names,data=np.zeros([len(wavelength),len(names)]))
-lCM20_df = pd.DataFrame()
-aSilM5_df = pd.DataFrame()
+lCM20_df = pd.DataFrame(columns=names,data=np.zeros([len(wavelength),len(names)]))
+aSilM5_df = pd.DataFrame(columns=names,data=np.zeros([len(wavelength),len(names)]))
 
-print(sCM20_df)
+#Also save in the wavelength
 
-# sCM20_df.to_hdf('test.h5',
-#                 mode='w',key='sCM20')
-# lCM20_df.to_hdf('test.h5',
-#                 key='lCM20')
-# aSilM5_df.to_hdf('test.h5',
-#                 key='aSilM5')
+sCM20_df['wavelength'] = wavelength
+
+#Read in each grid and put into the dataframe
+
+for i in tqdm(alpha,
+              desc='Total'):
+    for j in tqdm(isrf,
+                  leave=False,
+                  desc='alpha=%.2f' % i):
+     
+        small_grains,\
+            large_grains,\
+            pyroxine,\
+            olivine, = np.loadtxt('grid/SED_%.2f_%.2f.RES' % (i,j),
+                                  unpack=True,
+                                  skiprows=8,
+                                  usecols=(1,2,3,4))
+     
+        identifier = '%.2f,%.2f' % (i,j)
+         
+        sCM20_df[identifier] = small_grains
+        lCM20_df[identifier] = large_grains
+        aSilM5_df[identifier] = pyroxine+olivine
+        
+print(sCM20_df['2.71,0.00'])
+
+sCM20_df.to_hdf('models.h5',
+                mode='w',key='sCM20')
+lCM20_df.to_hdf('models.h5',
+                key='lCM20')
+aSilM5_df.to_hdf('models.h5',
+                key='aSilM5')
 
 print('Complete!')
