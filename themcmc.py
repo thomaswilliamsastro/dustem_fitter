@@ -61,9 +61,9 @@ if not os.path.exists('plots/corner'):
     os.mkdir('plots/corner')
 if not os.path.exists('samples'):
     os.mkdir('samples')
-if not os.path.exists('skirt_output'):
+if not os.path.exists('skirt_output') and args.skirtoutput:
     os.mkdir('skirt_output')
-if not os.path.exists('dustem_output'):
+if not os.path.exists('dustem_output') and args.dustemoutput:
     os.mkdir('dustem_output')
 
 if __name__ == "__main__":
@@ -121,7 +121,7 @@ if __name__ == "__main__":
                     
         if args.skirtoutput:
             
-            if not os.path.isfile('skirt_output/template_'+gal_name+'_'+arg.smethod+'.ski'):
+            if not os.path.isfile('skirt_output/template_'+gal_name+'_'+args.method+'.ski'):
             
                 print('Writing SKIRT code snippet '+gal_name)
                 
