@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     start_time = time.time()
     
-    #For each galaxy, read in fluxes and see if we have sufficient points to fit
+    #For each galaxy, read in fluxes
     
     flux_df = pd.read_csv(args.fluxes+'.csv')
     filter_df = pd.read_csv(args.filters+'.csv')
@@ -82,62 +82,7 @@ if __name__ == "__main__":
         gal_name = flux_df['name'][gal_row]
         dist = flux_df['dist'][gal_row]
         
-        for filter_name in filter_df.dtypes.index[1:]:
-            
-            try:
-                            
-                if np.isnan(flux_df[filter_name][gal_row]) == False and \
-                    np.isnan(flux_df[filter_name+'_err'][gal_row]) == False:
-                    
-                    if flux_df[filter_name][gal_row] > 0:
-                        
-                        #Fit only the data with no flags
-                        
-                        try:
-                        
-                            if pd.isnull(flux_df[filter_name+'_flag'][gal_row]):
-                                keys.append(filter_name) 
-                                
-                        except KeyError:
-                            keys.append(filter_name)                    
-                    
-            except KeyError:
-                pass
-            
-        #Only fit if we cover the entire SED adequately. This means either 3.4
-        #or 3.6, Spizer 8 or WISE 12 or IRAS 12, MIPS 24 or WISE 22 or IRAS 25,
-        #MIPS 70 or PACS 70 or IRAS 60, PACS 100 or IRAS 100, MIPS 160 or PACS 160,
-        #SPIRE 250, SPIRE 350 or Planck 350, SPIRE 500 or Planck 550.
-        
-        if 'Spitzer_3.6' not in keys and 'WISE_3.4' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        if 'Spitzer_8.0' not in keys and 'WISE_12' not in keys and 'IRAS_12' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        if 'Spitzer_24' not in keys and 'WISE_22' not in keys and 'IRAS_25' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        if 'Spitzer_70' not in keys and 'PACS_70' not in keys and 'IRAS_60' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        if 'PACS_100' not in keys and 'IRAS_100' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        if 'Spitzer_160' not in keys and 'PACS_160' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        if 'SPIRE_250' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        if 'SPIRE_350' not in keys and 'Planck_350' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        if 'SPIRE_500' not in keys and 'Planck_550' not in keys:
-            print('Insufficient points to fit '+gal_name)
-            continue
-        
-        #Else, we have sufficient coverage so fit!
+        #Fit the data!
             
         samples,filter_dict,keys = themcmc_sampler.sample(method=args.method,
                                                           flux_file=args.fluxes,
