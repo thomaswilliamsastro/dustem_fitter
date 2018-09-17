@@ -15,6 +15,26 @@ import pandas as pd
 
 from scipy.constants import h,k,c
 
+def convert_to_luminosity(flux,
+                          distance,
+                          frequency):
+    
+    #Get rid of the Hz^-1 term
+    
+    flux *= frequency
+    
+    #And the m^2 term -- distance is in Mpc!
+    
+    flux *= 4*np.pi*(distance*3.086e16*1e6)**2
+    
+    flux *= 1e-26
+    
+    #We now have a flux in W so convert to Lsun
+    
+    flux /= 3.828e26
+    
+    return flux
+
 def read_sed(isrf,
              alpha,
              sCM20_df,

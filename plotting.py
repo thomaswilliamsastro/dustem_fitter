@@ -29,7 +29,9 @@ def plot_sed(method,
              filter_df,
              gal_row,
              samples,
-             filter_dict):
+             filter_dict,
+             units,
+             distance):
     
     gal_name = flux_df['name'][gal_row]
     
@@ -200,6 +202,66 @@ def plot_sed(method,
                                        axis=0)
     y_median_total = np.percentile(y_to_percentile_total,50,
                                    axis=0)
+    
+    #If outputting luminosity, convert all these fluxes accordingly
+    
+    if units in ['luminosity']:
+        
+        y_upper_stars = general.convert_to_luminosity(y_upper_stars,
+                                                      distance,
+                                                      frequency)
+        y_lower_stars = general.convert_to_luminosity(y_lower_stars,
+                                                      distance,
+                                                      frequency)
+        y_upper_small = general.convert_to_luminosity(y_upper_small,
+                                                      distance,
+                                                      frequency)
+        y_lower_small = general.convert_to_luminosity(y_lower_small,
+                                                      distance,
+                                                      frequency)
+        y_upper_large = general.convert_to_luminosity(y_upper_large,
+                                                      distance,
+                                                      frequency)
+        y_lower_large = general.convert_to_luminosity(y_lower_large,
+                                                      distance,
+                                                      frequency)
+        y_upper_silicates = general.convert_to_luminosity(y_upper_silicates,
+                                                          distance,
+                                                          frequency)
+        y_lower_silicates = general.convert_to_luminosity(y_lower_silicates,
+                                                          distance,
+                                                          frequency)
+        y_upper = general.convert_to_luminosity(y_upper,
+                                                distance,
+                                                frequency)
+        y_lower = general.convert_to_luminosity(y_upper,
+                                                distance,
+                                                frequency)
+    
+        y_median_stars = general.convert_to_luminosity(y_median_stars,
+                                                       distance,
+                                                       frequency)
+        y_median_small = general.convert_to_luminosity(y_median_small,
+                                                       distance,
+                                                       frequency)
+        y_median_large = general.convert_to_luminosity(y_median_large,
+                                                       distance,
+                                                       frequency)
+        y_median_silicates = general.convert_to_luminosity(y_median_silicates,
+                                                           distance,
+                                                           frequency)
+        y_median_total = general.convert_to_luminosity(y_median_total,
+                                                       distance,
+                                                       frequency)
+        
+        #And the actual fluxes!
+        
+        obs_flux = general.convert_to_luminosity(obs_flux,
+                                                 distance,
+                                                 3e8/(obs_wavelength*1e-6))
+        obs_error = general.convert_to_luminosity(obs_error,
+                                                  distance,
+                                                  3e8/(obs_wavelength*1e-6))
                 
     #Calculate residuals
                    
@@ -221,7 +283,7 @@ def plot_sed(method,
     frame1 = fig1.add_axes((.1,.3,.8,.6))
     
     #Plot the best fit and errorbars. The flux errors here are only
-    #RMS, so include overall calibration from Chris' paper
+    #RMS, so include overall calibration from Clark et al. (2018).
     
     for i in range(len(keys)):
         
@@ -320,12 +382,28 @@ def plot_sed(method,
     plt.ylim([0.5*10**np.floor(np.log10(np.min(obs_flux[obs_flag == 0]))-1),
               10**np.ceil(np.log10(np.max(obs_flux[obs_flag == 0]))+1)])
     
-    plt.legend(loc='upper left',
-               fontsize=14,
-               frameon=False)
+    #Move the legend outside of the plot so it doesn't overlap with anything
     
-    plt.ylabel(r'$F_\nu$ (Jy)',
-               fontsize=14)
+    plt.subplots_adjust(left=0.1,right = 0.75)
+    
+    plt.legend(loc=2,
+               fontsize=14,
+               frameon=False,
+               bbox_to_anchor=(1.01, 0.5))
+    
+    if units in ['flux']:
+    
+        plt.ylabel(r'$F_\nu$ (Jy)',
+                   fontsize=14)
+        
+    elif units in ['luminosity']:
+        
+        plt.ylabel(r'$\lambda L_\lambda$ ($L_\odot$)',
+                   fontsize=14)
+        
+    else:
+        
+        print('Unknown unit type specified! Defaulting to Jy')
     
     plt.yticks(fontsize=14)
     

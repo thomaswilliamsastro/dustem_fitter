@@ -38,6 +38,8 @@ parser.add_argument('--method',type=str,default='default',metavar='',
                     help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree'")
 parser.add_argument('--plot',action='store_true',default=False,
                     help="Plot SED and corner plot.")
+parser.add_argument('--units',type=str,default='flux',
+                    help="Units for the plot. Options are flux (Jy) or luminosity (Lsun)")
 parser.add_argument('--skirtoutput',action='store_true',default=False,
                     help="Write out SKIRT mix code snippet. (N.B. does not work with multiu!)")
 parser.add_argument('--dustemoutput',action='store_true',default=False,
@@ -93,14 +95,20 @@ if __name__ == "__main__":
             
             if not os.path.isfile('plots/sed/'+gal_name+'_'+args.method+'.png'):
                 
-                print('Plotting '+gal_name)
+                print('Plotting SED')
             
                 plotting.plot_sed(method=args.method,
                                   flux_df=flux_df,
                                   filter_df=filter_df,
                                   gal_row=gal_row,
                                   samples=samples,
-                                  filter_dict=filter_dict)
+                                  filter_dict=filter_dict,
+                                  units=args.units,
+                                  distance=dist)
+                
+            if not os.path.isfile('plots/corner/'+gal_name+'_'+args.method+'.png'):
+                
+                print('Plotting corner')
                 
                 plotting.plot_corner(method=args.method,
                                      samples=samples,
@@ -113,7 +121,7 @@ if __name__ == "__main__":
             
             if not os.path.isfile('dustem_output/GRAIN_'+gal_name+'_'+args.method+'.dat'):
             
-                print('Writing DustEM GRAIN.dat file for '+gal_name)
+                print('Writing DustEM GRAIN.dat file')
                 
                 code_snippets.dustemoutput(method=args.method,
                                            samples=samples,
@@ -123,7 +131,7 @@ if __name__ == "__main__":
             
             if not os.path.isfile('skirt_output/template_'+gal_name+'_'+args.method+'.ski'):
             
-                print('Writing SKIRT code snippet '+gal_name)
+                print('Writing SKIRT code snippet')
                 
                 code_snippets.skirtoutput(method=args.method,
                                           samples=samples,
