@@ -345,7 +345,7 @@ def sample(method,
             
             samples_df = pd.DataFrame( OrderedDict( (("log$_{10}$ U",samples[:,0]),
                                                      ("$\Omega_\\ast$",samples[:,1]),
-                                                     ("$\alpha_\mathregular{sCM20}$",samples[:,2]),
+                                                     ("$\\alpha_\mathregular{sCM20}$",samples[:,2]),
                                                      ("log$_{10}$ M$_\mathregular{sCM20}$",samples[:,3]),
                                                      ("log$_{10}$ M$_\mathregular{lCM20}$",samples[:,4]),
                                                      ("log$_{10}$ M$_\mathregular{aSilM5}$",samples[:,5]),

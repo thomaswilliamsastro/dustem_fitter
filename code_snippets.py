@@ -71,7 +71,7 @@ def dustemoutput(method,
         
         if method == 'ascfree':
             
-            idx_asc = col_names.index("$\alpha_\mathregular{sCM20}$")
+            idx_asc = col_names.index("$\\alpha_\mathregular{sCM20}$")
             
             filedata = filedata.replace('[-5.00E-00]', '%.2E' % (medians[idx_asc]))
             
@@ -142,7 +142,7 @@ def skirtoutput(method,
     
     if method == 'ascfree':
         
-        idx_asc = col_names.index("$\alpha_\mathregular{sCM20}$")
+        idx_asc = col_names.index("$\\alpha_\mathregular{sCM20}$")
         alpha = float('%.2f' % medians[idx_asc])
         
     else:
