@@ -7,7 +7,9 @@ Create a Pandas dataframe for the correlated uncertainties
 from __future__ import absolute_import, print_function, division
 import pandas as pd
 import numpy as np
-import copy
+import os
+
+os.chdir(os.getcwd())
 
 filters = ['Spitzer_3.6',
            'Spitzer_4.5',
@@ -46,7 +48,7 @@ df['name'] = pd.Series(filters)
 #IRAC uncertainties. From Reach+ (2005), these are 1.8%, 1.9%,
 #2.0% and 2.1% at 3.6, 4.5, 5.8 and 8 micron respectively.
 
-idx = df[df['name'].str.contains('IRAC')].index
+idx = df[df['name'].str.contains('Spitzer_3.6|Spitzer_4.5|Spitzer_5.8|Spitzer_8.0')].index
 
 df['Spitzer_3.6'][idx] = 0.018*2
 df['Spitzer_4.5'][idx] = 0.019*2
@@ -56,7 +58,8 @@ df['Spitzer_8.0'][idx] = 0.021*2
 #MIPS uncertainties. From Engelbrach+ (2007) and Gordon+ (2007),
 #these are 2% at 24micron and 5% at 70micron
 
-idx = df[df['name'].str.contains('MIPS')].index
+idx = df[df['name'].str.contains('Spitzer_24|Spitzer_70|Spitzer_160')].index
+print(idx)
 
 df['Spitzer_24'][idx] = 0.02*2
 df['Spitzer_70'][idx] = 0.05*2
@@ -76,25 +79,6 @@ df['SPIRE_250'][idx] = 0.04*2
 df['SPIRE_350'][idx] = 0.04*2
 df['SPIRE_500'][idx] = 0.04*2
 
-print(df)
+df.to_csv('../corr_uncert.csv')
 
-df.to_csv('/home/daedalusdata/c1625914/dustem_fitter/corr_uncert.csv')
-
-# flux = {'IRAC3_6':1,
-#         'IRAC4_5':1,
-#         'IRAC5_8':1,
-#         'IRAC8':1}
-# 
-# corr_err = np.matrix(np.zeros([len(flux),len(flux)]))
-# 
-# keys = []
-# 
-# for key in flux:
-#     keys.append(key)
-#  
-# for i in range(len(flux)):
-#     for j in range(len(flux)):
-#          
-#         corr_err[i,j] = flux[keys[i]]*flux[keys[j]]* \
-#                             df[keys[j]][df.index[df['name'] == keys[j]][0]]* \
-#                             df[keys[i]][df.index[df['name'] == keys[i]][0]]
+print('Complete!')

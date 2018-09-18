@@ -11,7 +11,7 @@ from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as plt
 
-os.chdir('/home/daedalusdata/c1625914/dustem_fitter/')
+os.chdir(os.getcwd())
 
 #Create a dataframe with 1) central wavelength and 2) uncorrelated calibration uncertainty
 
@@ -44,42 +44,6 @@ d = {'Spitzer_3.6':[3.6,0.015],
 
 df = pd.DataFrame(data=d)
 
-df.to_csv('filters.csv')
-
-#Also pull out the Planck 350 and 550 filters and save those
-
-planck_hdu = fits.open('dev/HFI_RIMO_R1.10.fits')[6]
-
-planck_freq = []
-planck_transmission = []
-
-for i in range(planck_hdu.data.shape[0]):
-    planck_freq.append(planck_hdu.data[i][0])
-    planck_transmission.append(planck_hdu.data[i][1])
-    
-planck_freq = np.array(planck_freq)
-planck_transmission = np.array(planck_transmission)
-
-planck_freq *= 3e8*1e-7
-planck_wavelength = (3e8*1e10)/(planck_freq*1e9)
-
-np.savetxt('filters/Planck_550.dat',np.c_[planck_wavelength[1:],planck_transmission[1:]])
-
-planck_hdu = fits.open('dev/HFI_RIMO_R1.10.fits')[7]
-
-planck_freq = []
-planck_transmission = []
-
-for i in range(planck_hdu.data.shape[0]):
-    planck_freq.append(planck_hdu.data[i][0])
-    planck_transmission.append(planck_hdu.data[i][1])
-    
-planck_freq = np.array(planck_freq)
-planck_transmission = np.array(planck_transmission)
-
-planck_freq *= 3e8*1e-7
-planck_wavelength = (3e8*1e10)/(planck_freq*1e9)
-
-np.savetxt('filters/Planck_350.dat',np.c_[planck_wavelength[1:],planck_transmission[1:]])
+df.to_csv('../filters.csv')
 
 print('Complete!')
