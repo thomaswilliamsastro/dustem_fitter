@@ -53,7 +53,7 @@ def plot_sed(method,
     if method != 'fit-z':
     
         z = z_at_value(Planck15.luminosity_distance,flux_df['dist'][gal_row]*u.Mpc)    
-        wavelength_redshifted = wavelength/(1+z)
+        wavelength_redshifted = wavelength * (1+z)
         
     frequency = 3e8/(wavelength*1e-6)
     
@@ -179,7 +179,7 @@ def plot_sed(method,
             y_lCM20 = 1
             y_aSilM5 = 1
             
-            wavelength_redshifted = wavelength/(1+z)
+            wavelength_redshifted = wavelength * (1+z)
                
         small_grains,\
             large_grains,\

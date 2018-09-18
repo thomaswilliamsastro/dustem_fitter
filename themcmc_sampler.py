@@ -569,7 +569,7 @@ def filter_convolve(flux,
     
     #Account for redshift
     
-    wavelength_redshifted = wavelength/(1+z)
+    wavelength_redshifted = wavelength * (1+z)
     
     for key in keys:
                  

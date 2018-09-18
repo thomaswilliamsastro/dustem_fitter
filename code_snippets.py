@@ -16,6 +16,23 @@ def dustemoutput(method,
                  samples_df,
                  gal_name):
     
+    #Convert the samples dataframe back into an array,
+    #also append the column names.
+    
+    samples = np.zeros(samples_df.shape)
+    
+    i = 0
+    col_names = []
+    
+    for col_name in samples_df.dtypes.index:
+        
+        col_values = samples_df[col_name].tolist()
+        
+        col_names.append(col_name)
+        
+        samples[:,i] = col_values
+        i += 1
+    
     with open('GRAIN_orig.DAT', 'r') as file:
         
         #Read in the template file
@@ -25,15 +42,22 @@ def dustemoutput(method,
         medians = np.median(samples,axis=0)
         
         #In all cases, we need to replace the ISRF strength
-        filedata = filedata.replace('[1.000000]','%.6f' % 10**medians[0])
+        
+        idx_isrf = col_names.index("log$_{10}$ U")
+        
+        filedata = filedata.replace('[1.000000]','%.6f' % 10**medians[idx_isrf])
         
         #In the cases where we vary abundances, update as appropriate
         
         if method in ['abundfree','ascfree']:
             
-            filedata = filedata.replace('[0.170E-02]', '%.3E' % (0.17e-2*medians[-4]))       
-            filedata = filedata.replace('[0.630E-03]', '%.3E' % (0.63e-3*medians[-3]))
-            filedata = filedata.replace('[0.255E-02]', '%.3E' % (0.255e-2*medians[-2]))
+            idx_sCM20 = col_names.index("log$_{10}$ M$_\mathregular{sCM20}$")
+            idx_lCM20 = col_names.index("log$_{10}$ M$_\mathregular{lCM20}$")
+            idx_aSilM5 = col_names.index("log$_{10}$ M$_\mathregular{aSilM5}$")
+            
+            filedata = filedata.replace('[0.170E-02]', '%.3E' % (0.17e-2*medians[idx_sCM20]))       
+            filedata = filedata.replace('[0.630E-03]', '%.3E' % (0.63e-3*medians[idx_lCM20]))
+            filedata = filedata.replace('[0.255E-02]', '%.3E' % (0.255e-2*medians[idx_aSilM5]))
             
         #Else, just get rid of square brackets
         
@@ -47,7 +71,9 @@ def dustemoutput(method,
         
         if method == 'ascfree':
             
-            filedata = filedata.replace('[-5.00E-00]', '%.2E' % (medians[2]))
+            idx_asc = col_names.index("$\alpha_\mathregular{sCM20}$")
+            
+            filedata = filedata.replace('[-5.00E-00]', '%.2E' % (medians[idx_asc]))
             
         else:
             
@@ -60,6 +86,23 @@ def dustemoutput(method,
 def skirtoutput(method,
                 samples_df,
                 gal_name):
+    
+    #Convert the samples dataframe back into an array,
+    #also append the column names.
+    
+    samples = np.zeros(samples_df.shape)
+    
+    i = 0
+    col_names = []
+    
+    for col_name in samples_df.dtypes.index:
+        
+        col_values = samples_df[col_name].tolist()
+        
+        col_names.append(col_name)
+        
+        samples[:,i] = col_values
+        i += 1
     
     medians = np.median(samples,axis=0)
     
@@ -99,7 +142,8 @@ def skirtoutput(method,
     
     if method == 'ascfree':
         
-        alpha = float('%.2f' % medians[2])
+        idx_asc = col_names.index("$\alpha_\mathregular{sCM20}$")
+        alpha = float('%.2f' % medians[idx_asc])
         
     else:
         
@@ -107,9 +151,13 @@ def skirtoutput(method,
         
     if method in ['abundfree','ascfree']:
         
-        y_sCM20 = float('%.11f' % medians[3])
-        y_lCM20 = float('%.11f' % medians[4])
-        y_aSilM5 = float('%.11f' % medians[5])
+        idx_sCM20 = col_names.index("log$_{10}$ M$_\mathregular{sCM20}$")
+        idx_lCM20 = col_names.index("log$_{10}$ M$_\mathregular{lCM20}$")
+        idx_aSilM5 = col_names.index("log$_{10}$ M$_\mathregular{aSilM5}$")
+        
+        y_sCM20 = float('%.11f' % medians[idx_sCM20])
+        y_lCM20 = float('%.11f' % medians[idx_lCM20])
+        y_aSilM5 = float('%.11f' % medians[idx_aSilM5])
         
     else:
         
