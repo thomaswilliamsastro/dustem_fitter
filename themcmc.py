@@ -35,7 +35,7 @@ import code_snippets
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='THEMCMC optional settings.')
 parser.add_argument('--method',type=str,default='default',metavar='',
-                    help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree'")
+                    help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree', 'fit-z'")
 parser.add_argument('--plot',action='store_true',default=False,
                     help="Plot SED and corner plot.")
 parser.add_argument('--units',type=str,default='flux',
@@ -82,14 +82,22 @@ if __name__ == "__main__":
         keys = []
         
         gal_name = flux_df['name'][gal_row]
-        dist = flux_df['dist'][gal_row]
         
-        #Fit the data!
+        try:
+        
+            dist = flux_df['dist'][gal_row]
             
-        samples,filter_dict,keys = themcmc_sampler.sample(method=args.method,
-                                                          flux_file=args.fluxes,
-                                                          filter_file=args.filters,
-                                                          gal_row=gal_row)
+        except KeyError:
+            
+            if not args.method in ['fit-z']:               
+                raise Exception('No distance found!')              
+            else:                
+                dist = 0
+            
+        samples_df,filter_dict,keys = themcmc_sampler.sample(method=args.method,
+                                                             flux_file=args.fluxes,
+                                                             filter_file=args.filters,
+                                                             gal_row=gal_row)
             
         if args.plot:
             
@@ -101,7 +109,7 @@ if __name__ == "__main__":
                                   flux_df=flux_df,
                                   filter_df=filter_df,
                                   gal_row=gal_row,
-                                  samples=samples,
+                                  samples_df=samples_df,
                                   filter_dict=filter_dict,
                                   units=args.units,
                                   distance=dist)
@@ -111,7 +119,7 @@ if __name__ == "__main__":
                 print('Plotting corner')
                 
                 plotting.plot_corner(method=args.method,
-                                     samples=samples,
+                                     samples_df=samples_df,
                                      gal_name=gal_name,
                                      distance=dist)
         
@@ -124,7 +132,7 @@ if __name__ == "__main__":
                 print('Writing DustEM GRAIN.dat file')
                 
                 code_snippets.dustemoutput(method=args.method,
-                                           samples=samples,
+                                           samples_df=samples_df,
                                            gal_name=gal_name)
                     
         if args.skirtoutput:
@@ -134,7 +142,9 @@ if __name__ == "__main__":
                 print('Writing SKIRT code snippet')
                 
                 code_snippets.skirtoutput(method=args.method,
-                                          samples=samples,
+                                          samples_df=samples_df,
                                           gal_name=gal_name)
+                
+        no
     
     print('Code complete, took %.2fm' % ( (time.time() - start_time)/60 ))

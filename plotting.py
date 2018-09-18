@@ -20,6 +20,11 @@ import corner
 import numpy as np
 import pandas as pd
 
+#For calculating redshift, given distance
+
+import astropy.units as u
+from astropy.cosmology import Planck15, z_at_value
+
 #THEMCMC imports
 
 import general
@@ -28,7 +33,7 @@ def plot_sed(method,
              flux_df,
              filter_df,
              gal_row,
-             samples,
+             samples_df,
              filter_dict,
              units,
              distance):
@@ -42,7 +47,28 @@ def plot_sed(method,
     aSilM5_df = pd.read_hdf('models.h5','aSilM5')
     
     wavelength = sCM20_df['wavelength'].values.copy()
+    
+    #Take redshift into account
+    
+    if method != 'fit-z':
+    
+        z = z_at_value(Planck15.luminosity_distance,flux_df['dist'][gal_row]*u.Mpc)    
+        wavelength_redshifted = wavelength/(1+z)
+        
     frequency = 3e8/(wavelength*1e-6)
+    
+    #Convert the samples dataframe back into an array for plotting
+    
+    samples = np.zeros(samples_df.shape)
+    
+    i = 0
+    
+    for col_name in samples_df.dtypes.index:
+        
+        col_values = samples_df[col_name].tolist()
+        
+        samples[:,i] = col_values
+        i += 1
     
     #Generate stars
     
@@ -140,6 +166,20 @@ def plot_sed(method,
                 y_lCM20,\
                 y_aSilM5,\
                 dust_scaling = samples[np.random.randint(len(samples)),:]
+                
+        if method == 'fit-z':
+        
+            isrf,\
+                omega_star,\
+                dust_scaling,\
+                z = samples[np.random.randint(len(samples)),:]
+                
+            alpha = 5
+            y_sCM20 = 1
+            y_lCM20 = 1
+            y_aSilM5 = 1
+            
+            wavelength_redshifted = wavelength/(1+z)
                
         small_grains,\
             large_grains,\
@@ -150,24 +190,25 @@ def plot_sed(method,
                                          aSilM5_df,
                                          frequency)
         
-        x,y = plt.plot(wavelength,omega_star*stars)[0].get_data()    
+        x,y = plt.plot(wavelength_redshifted,omega_star*stars)[0].get_data()    
         y_to_percentile_stars.append(y)
         
-        x,y = plt.plot(wavelength,y_sCM20*small_grains*dust_scaling)[0].get_data()    
+        x,y = plt.plot(wavelength_redshifted,y_sCM20*small_grains*dust_scaling)[0].get_data()    
         y_to_percentile_small.append(y)
         
-        x,y = plt.plot(wavelength,y_lCM20*large_grains*dust_scaling)[0].get_data()    
+        x,y = plt.plot(wavelength_redshifted,y_lCM20*large_grains*dust_scaling)[0].get_data()    
         y_to_percentile_large.append(y)
         
-        x,y = plt.plot(wavelength,y_aSilM5*silicates*dust_scaling)[0].get_data()    
+        x,y = plt.plot(wavelength_redshifted,y_aSilM5*silicates*dust_scaling)[0].get_data()    
         y_to_percentile_silicates.append(y)
         
-        x,y = plt.plot(wavelength,dust_scaling*(y_sCM20*small_grains+\
+        x,y = plt.plot(wavelength_redshifted,dust_scaling*(y_sCM20*small_grains+\
                                     y_lCM20*large_grains+\
                                     y_aSilM5*silicates)+\
                                     omega_star*stars)[0].get_data()
         y_to_percentile_total.append(y)
         plt.close()
+        
         
     y_upper_stars = np.percentile(y_to_percentile_stars,84,
                                   axis=0)
@@ -404,6 +445,8 @@ def plot_sed(method,
     else:
         
         print('Unknown unit type specified! Defaulting to Jy')
+        plt.ylabel(r'$F_\nu$ (Jy)',
+                   fontsize=14)
     
     plt.yticks(fontsize=14)
     
@@ -460,7 +503,7 @@ def plot_sed(method,
                 bbox_inches='tight')
         
 def plot_corner(method,
-                samples,
+                samples_df,
                 gal_name,
                 distance):
     
@@ -470,60 +513,68 @@ def plot_corner(method,
     dgr_lCM20 = 0.63e-3
     dgr_aSilM5 = 0.255e-2*2
     
+    #Convert the samples dataframe back into an array for plotting,
+    #also append the column names for corner labels later.
+    
+    samples = np.zeros(samples_df.shape)
+    
+    i = 0
+    corner_labels = []
+    
+    for col_name in samples_df.dtypes.index:
+        
+        col_values = samples_df[col_name].tolist()
+        
+        corner_labels.append(col_name)
+        
+        samples[:,i] = col_values
+        i += 1
+    
     #Start by converting the scaling factor to a hydrogen mass
     
-    samples[:,-1] *= 1e-23
-    samples[:,-1] *= (distance*1e6*3.0857e18)**2
-    samples[:,-1] *= 1.67e-27
-    samples[:,-1] /= 2e30
-    samples[:,-1] *= 4*np.pi
+    scaling_factor_idx = corner_labels.index("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)")
     
-    #In all cases, the first 2 parts of samples are the ISRF and
-    #the stellar scaling factor, which we don't have to do anything
-    #to
-    
-    corner_labels = [r'log$_{10}$ U',r'$\Omega_\ast$']
-    
-    #In the case of varying alpha_sC20, the third column is alpha which
-    #doesn't require any conversions
-    
-    if method == 'ascfree':
-    
-        corner_labels.append(r'$\alpha_\mathregular{sCM20}$')
+    samples[:,scaling_factor_idx] *= 1e-23
+    samples[:,scaling_factor_idx] *= (distance*1e6*3.0857e18)**2
+    samples[:,scaling_factor_idx] *= 1.67e-27
+    samples[:,scaling_factor_idx] /= 2e30
+    samples[:,scaling_factor_idx] *= 4*np.pi
         
     #In the cases where we vary abundances, turn this into a more meaningful
     #dust mass for each component
     
     if method in ['ascfree','abundfree']:
         
+        idx_sCM20 = corner_labels.index("log$_{10}$ M$_\mathregular{sCM20}$")
+        idx_lCM20 = corner_labels.index("log$_{10}$ M$_\mathregular{lCM20}$")
+        idx_aSilM5 = corner_labels.index("log$_{10}$ M$_\mathregular{aSilM5}$")
+        
         corner_labels.append(r'log$_{10}$ M$_\mathregular{sCM20}$')
         corner_labels.append(r'log$_{10}$ M$_\mathregular{lCM20}$')
         corner_labels.append(r'log$_{10}$ M$_\mathregular{aSilM5}$')
         
-        samples[:,-4] = dgr_sCM20*samples[:,-1]*samples[:,-4]
-        samples[:,-4] = np.log10(samples[:,-4])
-        samples[:,-3] = dgr_lCM20*samples[:,-1]*samples[:,-3]
-        samples[:,-3] = np.log10(samples[:,-3])
-        samples[:,-2] = dgr_aSilM5*samples[:,-1]*samples[:,-2]
-        samples[:,-2] = np.log10(samples[:,-2])
+        samples[:,idx_sCM20] = dgr_sCM20*samples[:,scaling_factor_idx]*samples[:,idx_sCM20]
+        samples[:,idx_sCM20] = np.log10(samples[:,idx_sCM20])
+        samples[:,idx_lCM20] = dgr_lCM20*samples[:,scaling_factor_idx]*samples[:,idx_lCM20]
+        samples[:,idx_lCM20] = np.log10(samples[:,idx_lCM20])
+        samples[:,idx_aSilM5] = dgr_aSilM5*samples[:,scaling_factor_idx]*samples[:,idx_aSilM5]
+        samples[:,idx_aSilM5] = np.log10(samples[:,idx_aSilM5])
         
     #Finally, for all cases the final column is total dust mass
     
-    corner_labels.append(r'log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)')
-    
     if method == 'default':
         
-        samples[:,-1] = samples[:,-1]*dgr_sCM20 + \
-                        samples[:,-1]*dgr_lCM20 + \
-                        samples[:,-1]*dgr_aSilM5
+        samples[:,scaling_factor_idx] = samples[:,scaling_factor_idx]*dgr_sCM20 + \
+                                        samples[:,scaling_factor_idx]*dgr_lCM20 + \
+                                        samples[:,scaling_factor_idx]*dgr_aSilM5
         
     if method in ['ascfree','abundfree']:
     
-        samples[:,-1] = 10**samples[:,-4] + \
-                        10**samples[:,-3] + \
-                        10**samples[:,-2]
+        samples[:,scaling_factor_idx] = 10**samples[:,idx_sCM20] + \
+                                        10**samples[:,idx_lCM20] + \
+                                        10**samples[:,idx_aSilM5]
     
-    samples[:,-1] = np.log10(samples[:,-1])
+    samples[:,scaling_factor_idx] = np.log10(samples[:,scaling_factor_idx])
     
     #Calculate median values to plot as 'truths' on the corner plot
     

@@ -13,7 +13,7 @@ from __future__ import absolute_import, print_function, division
 import numpy as np
 
 def dustemoutput(method,
-                 samples,
+                 samples_df,
                  gal_name):
     
     with open('GRAIN_orig.DAT', 'r') as file:
@@ -58,7 +58,7 @@ def dustemoutput(method,
         file.write(filedata)
                     
 def skirtoutput(method,
-                samples,
+                samples_df,
                 gal_name):
     
     medians = np.median(samples,axis=0)
