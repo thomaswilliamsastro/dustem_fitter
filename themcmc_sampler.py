@@ -145,41 +145,6 @@ def sample(method,
     
     initial_dust_scaling = flux_df['SPIRE_250'][gal_row]/default_total[idx[0]] * (3e8/(250*1e-6))
     
-    #And build up the matrices for the errors
-    
-    rms_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
-    
-    for i in range(len(obs_error)):
-        rms_err[i,i] = obs_error[i]**2
-        
-    #Uncorrelated calibration errors
-        
-    uncorr_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
-    
-    i = 0
-    
-    for key in keys:
-        
-        uncorr_err[i,i] = (filter_df[key][1]*obs_flux[i])**2
-        
-        i += 1
-        
-    #And finally, correlated calibration errors
-    
-    corr_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
-    
-    for i in range(len(obs_flux)):
-        for j in range(i+1):
-            
-            corr_err[i,j] = obs_flux[i]*obs_flux[j]* \
-                            corr_uncert_df[keys[j]][corr_uncert_df.index[corr_uncert_df['name'] == keys[j]][0]]* \
-                            corr_uncert_df[keys[i]][corr_uncert_df.index[corr_uncert_df['name'] == keys[i]][0]]
-                            
-            corr_err[j,i] = corr_err[i,j]
-    
-    global total_err    
-    total_err = rms_err+uncorr_err+corr_err
-    
     #Read in the pickle jar if it exists, else do the fitting
 
     if os.path.exists('samples/'+gal_name+'_'+method+'.h5'):
@@ -199,6 +164,41 @@ def sample(method,
         processes = int(np.floor(mem/ram_footprint))
         
         print('Will fit using '+str(processes)+' processes')
+        
+        #Build up the matrices for the errors
+        
+        rms_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+        
+        for i in range(len(obs_error)):
+            rms_err[i,i] = obs_error[i]**2
+            
+        #Uncorrelated calibration errors
+            
+        uncorr_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+        
+        i = 0
+        
+        for key in keys:
+            
+            uncorr_err[i,i] = (filter_df[key][1]*obs_flux[i])**2
+            
+            i += 1
+            
+        #And finally, correlated calibration errors
+        
+        corr_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+        
+        for i in range(len(obs_flux)):
+            for j in range(i+1):
+                
+                corr_err[i,j] = obs_flux[i]*obs_flux[j]* \
+                                corr_uncert_df[keys[j]][corr_uncert_df.index[corr_uncert_df['name'] == keys[j]][0]]* \
+                                corr_uncert_df[keys[i]][corr_uncert_df.index[corr_uncert_df['name'] == keys[i]][0]]
+                                
+                corr_err[j,i] = corr_err[i,j]
+        
+        global total_err    
+        total_err = rms_err+uncorr_err+corr_err
         
         pos = []
         nwalkers = 500
