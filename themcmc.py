@@ -78,8 +78,6 @@ if __name__ == "__main__":
     filter_df = pd.read_csv(args.filters+'.csv')
     
     for gal_row in range(len(flux_df)):
-          
-        keys = []
         
         gal_name = flux_df['name'][gal_row]
         
@@ -94,7 +92,7 @@ if __name__ == "__main__":
             else:                
                 dist = 0
             
-        samples_df,filter_dict,keys = themcmc_sampler.sample(method=args.method,
+        samples_df,filter_dict = themcmc_sampler.sample(method=args.method,
                                                              flux_file=args.fluxes,
                                                              filter_file=args.filters,
                                                              gal_row=gal_row)
