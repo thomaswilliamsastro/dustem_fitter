@@ -142,7 +142,5 @@ if __name__ == "__main__":
                 code_snippets.skirtoutput(method=args.method,
                                           samples_df=samples_df,
                                           gal_name=gal_name)
-                
-        no
     
     print('Code complete, took %.2fm' % ( (time.time() - start_time)/60 ))

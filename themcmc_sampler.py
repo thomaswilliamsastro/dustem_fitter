@@ -15,15 +15,15 @@ import pandas as pd
 import dill
 from tqdm import tqdm
 from scipy.constants import h,k,c
-import os
 from psutil import virtual_memory
+import os
 import sys
 from collections import OrderedDict
 
 #emcee-related imports
 
 import emcee
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 #For calculating redshift, given distance
 
@@ -163,7 +163,9 @@ def sample(method,
         ram_footprint = sys.getsizeof(sCM20_df)*4 #approx footprint (generous!)
         mem = virtual_memory().available #free available RAM
         
-        processes = int(np.floor(mem/ram_footprint))
+        procs = cpu_count()
+        
+        processes = np.min([int(np.floor(mem/ram_footprint)),procs])
         
         print('Will fit using '+str(processes)+' processes')
         
