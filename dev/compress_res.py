@@ -35,15 +35,15 @@ for i in alpha:
                                     usecols=(0))
         
 #Set up a pandas DataFrame for each component (small- and large-carbons,
-#and silicates)
+#and silicates), and save wavelength separately
+
+frequency = 3e8/(wavelength*1e-6)
+
+wavelength_df = pd.DataFrame(columns=['wavelength'],data=wavelength)
 
 sCM20_df = pd.DataFrame(columns=names,data=np.zeros([len(wavelength),len(names)]))
 lCM20_df = pd.DataFrame(columns=names,data=np.zeros([len(wavelength),len(names)]))
 aSilM5_df = pd.DataFrame(columns=names,data=np.zeros([len(wavelength),len(names)]))
-
-#Also save in the wavelength
-
-sCM20_df['wavelength'] = wavelength
 
 #Read in each grid and put into the dataframe
 
@@ -63,12 +63,14 @@ for i in tqdm(alpha,
      
         identifier = '%.2f,%.2f' % (i,j)
          
-        sCM20_df[identifier] = small_grains
-        lCM20_df[identifier] = large_grains
-        aSilM5_df[identifier] = pyroxine+olivine
+        sCM20_df[identifier] = small_grains/frequency
+        lCM20_df[identifier] = large_grains/frequency
+        aSilM5_df[identifier] = (pyroxine+olivine)/frequency
 
 sCM20_df.to_hdf('../models.h5',
                 mode='w',key='sCM20')
+wavelength_df.to_hdf('../models.h5',
+                     key='wavelength')
 lCM20_df.to_hdf('../models.h5',
                 key='lCM20')
 aSilM5_df.to_hdf('../models.h5',

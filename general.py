@@ -39,8 +39,7 @@ def read_sed(isrf,
              alpha,
              sCM20_df,
              lCM20_df,
-             aSilM5_df,
-             frequency):
+             aSilM5_df):
     
     #Read in the SED that corresponds to this
     #combination of ISRF strength and alpha 
@@ -52,12 +51,6 @@ def read_sed(isrf,
     small_grains = sCM20_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
     large_grains = lCM20_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
     silicates = aSilM5_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
-    
-    #Convert these into units more like Jy -- divide by Hz
-    
-    small_grains /= frequency
-    large_grains /= frequency
-    silicates /= frequency
     
     return small_grains,large_grains,silicates
 

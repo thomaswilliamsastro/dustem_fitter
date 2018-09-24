@@ -33,6 +33,7 @@ from astropy.cosmology import Planck15, z_at_value
 #THEMCMC imports
 
 import general
+from fortran_funcs import covariance_matrix,trapz
 
 #MAIN SAMPLING FUNCTION
 
@@ -50,6 +51,7 @@ def sample(method,
     sCM20_df = pd.read_hdf('models.h5','sCM20')
     lCM20_df = pd.read_hdf('models.h5','lCM20')
     aSilM5_df = pd.read_hdf('models.h5','aSilM5')
+    wavelength_df = pd.read_hdf('models.h5','wavelength')
     
     #Read in the useful Pandas dataframes
     
@@ -62,7 +64,7 @@ def sample(method,
     #Define the wavelength grid (given by the dustEM output)
     
     global wavelength
-    wavelength = sCM20_df['wavelength'].values.copy()
+    wavelength = wavelength_df['wavelength'].values.copy()
     
     global frequency
     frequency = 3e8/(wavelength*1e-6)
@@ -143,7 +145,7 @@ def sample(method,
     
     idx = np.where(np.abs(wavelength-filter_df['SPIRE_250'][0]) == np.min(np.abs(wavelength-filter_df['SPIRE_250'][0])))
     
-    initial_dust_scaling = flux_df['SPIRE_250'][gal_row]/default_total[idx[0]] * (3e8/(250*1e-6))
+    initial_dust_scaling = flux_df['SPIRE_250'][gal_row]/default_total[idx[0]]
     
     #Read in the pickle jar if it exists, else do the fitting
 
@@ -167,14 +169,14 @@ def sample(method,
         
         #Build up the matrices for the errors
         
-        rms_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+        rms_err = np.array(np.zeros([len(obs_flux),len(obs_flux)]))
         
         for i in range(len(obs_error)):
             rms_err[i,i] = obs_error[i]**2
             
         #Uncorrelated calibration errors
             
-        uncorr_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+        uncorr_err = np.array(np.zeros([len(obs_flux),len(obs_flux)]))
         
         i = 0
         
@@ -186,7 +188,7 @@ def sample(method,
             
         #And finally, correlated calibration errors
         
-        corr_err = np.matrix(np.zeros([len(obs_flux),len(obs_flux)]))
+        corr_err = np.array(np.zeros([len(obs_flux),len(obs_flux)]))
         
         for i in range(len(obs_flux)):
             for j in range(i+1):
@@ -459,8 +461,7 @@ def lnlike(theta,
                                      alpha,
                                      sCM20_df,
                                      lCM20_df,
-                                     aSilM5_df,
-                                     frequency)    
+                                     aSilM5_df)    
     
     #Scale everything accordingly
     
@@ -473,7 +474,7 @@ def lnlike(theta,
     
     flux_diff = (filter_fluxes-obs_flux)[np.newaxis]
     
-    chisq = flux_diff*total_err.I*flux_diff.T
+    chisq = covariance_matrix(flux_diff,total_err,flux_diff.T)
     
     likelihood = -0.5*chisq
     
@@ -580,7 +581,7 @@ def filter_convolve(flux,
         
         filter_flux = np.interp(filter_dict[key][0],wavelength_redshifted,flux)
                  
-        filter_fluxes.append( np.abs( (np.trapz(filter_dict[key][1]*filter_flux,filter_dict[key][0])/
-                                      np.trapz(filter_dict[key][1],filter_dict[key][0])) ) )
+        filter_fluxes.append( np.abs( (trapz(filter_dict[key][1]*filter_flux,filter_dict[key][0])/
+                                      trapz(filter_dict[key][1],filter_dict[key][0])) ) )
     
     return np.array(filter_fluxes)

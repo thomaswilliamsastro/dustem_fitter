@@ -28,6 +28,7 @@ from astropy.cosmology import Planck15, z_at_value
 #THEMCMC imports
 
 import general
+from fortran_funcs import trapz
 
 def plot_sed(method,
              flux_df,
@@ -45,8 +46,9 @@ def plot_sed(method,
     sCM20_df = pd.read_hdf('models.h5','sCM20')
     lCM20_df = pd.read_hdf('models.h5','lCM20')
     aSilM5_df = pd.read_hdf('models.h5','aSilM5')
+    wavelength_df = pd.read_hdf('models.h5','wavelength')
     
-    wavelength = sCM20_df['wavelength'].values.copy()
+    wavelength = wavelength_df['wavelength'].values.copy()
     
     #Take redshift into account
     
@@ -187,27 +189,25 @@ def plot_sed(method,
                                          alpha,
                                          sCM20_df,
                                          lCM20_df,
-                                         aSilM5_df,
-                                         frequency)
+                                         aSilM5_df)
         
-        x,y = plt.plot(wavelength_redshifted,omega_star*stars)[0].get_data()    
+        y = omega_star*stars   
         y_to_percentile_stars.append(y)
         
-        x,y = plt.plot(wavelength_redshifted,y_sCM20*small_grains*dust_scaling)[0].get_data()    
+        y = y_sCM20*small_grains*dust_scaling   
         y_to_percentile_small.append(y)
         
-        x,y = plt.plot(wavelength_redshifted,y_lCM20*large_grains*dust_scaling)[0].get_data()    
+        y = y_lCM20*large_grains*dust_scaling 
         y_to_percentile_large.append(y)
         
-        x,y = plt.plot(wavelength_redshifted,y_aSilM5*silicates*dust_scaling)[0].get_data()    
+        y = y_aSilM5*silicates*dust_scaling 
         y_to_percentile_silicates.append(y)
         
-        x,y = plt.plot(wavelength_redshifted,dust_scaling*(y_sCM20*small_grains+\
-                                    y_lCM20*large_grains+\
-                                    y_aSilM5*silicates)+\
-                                    omega_star*stars)[0].get_data()
+        y = dust_scaling*(y_sCM20*small_grains+\
+                           y_lCM20*large_grains+\
+                           y_aSilM5*silicates)+\
+                           omega_star*stars
         y_to_percentile_total.append(y)
-        plt.close()
         
         
     y_upper_stars = np.percentile(y_to_percentile_stars,84,
