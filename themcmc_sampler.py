@@ -23,7 +23,7 @@ from collections import OrderedDict
 #emcee-related imports
 
 import emcee
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count   
 
 #For calculating redshift, given distance
 
@@ -40,13 +40,20 @@ from fortran_funcs import covariance_matrix,trapz
 def sample(method,
            flux_file,
            filter_file,
-           gal_row):
+           gal_row,
+           pandas_dfs,
+           mpi):
     
     #Read in models
     
     global sCM20_df,lCM20_df,aSilM5_df
     
     #Read in the DustEM grid
+    
+    sCM20_df,\
+        lCM20_df,\
+        aSilM5_df,\
+        wavelength_df = pandas_dfs
     
     sCM20_df = pd.read_hdf('models.h5','sCM20')
     lCM20_df = pd.read_hdf('models.h5','lCM20')
@@ -156,7 +163,7 @@ def sample(method,
         samples_df = pd.read_hdf('samples/'+gal_name+'_'+method+'.h5',
                                  'samples')
             
-    else:  
+    else:
         
         #Make sure the program doesn't run into swap
 
@@ -165,9 +172,13 @@ def sample(method,
         
         procs = cpu_count()
         
-        processes = np.min([int(np.floor(mem/ram_footprint)),procs])
+        #Run with the minimum processors that will either (a) not quite run into
+        #swap, (b) maxes out the machine or (c) 8 processes (since it doesn't scale well
+        #beyond that)
         
-        print('Will fit using '+str(processes)+' processes')
+        processes = np.min([int(np.floor(mem/ram_footprint)),procs,8])
+    
+        print('Fitting '+gal_name+' using '+str(processes)+' processes')
         
         #Build up the matrices for the errors
         
@@ -352,12 +363,24 @@ def sample(method,
         #500 steps for the 500 walkers, but throw away
         #the first 250 as a burn-in
         
+        #If using MPI this gets very messy so don't use
+        #tqdm
+        
         nsteps = 500
-        for i,result in tqdm(enumerate(sampler.sample(pos,
-                                                  iterations=nsteps)),
-                             total=nsteps,
-                             desc='Fitting '+gal_name):
-            pos,probability,state = result
+        
+        if mpi:
+            
+            for i,result in enumerate(sampler.sample(pos,
+                                                     iterations=nsteps)):
+                pos,probability,state = result
+            
+        else:
+        
+            for i,result in tqdm(enumerate(sampler.sample(pos,
+                                                      iterations=nsteps)),
+                                 total=nsteps,
+                                 desc='Fitting '+gal_name):
+                pos,probability,state = result
             
         pool.close()
             
