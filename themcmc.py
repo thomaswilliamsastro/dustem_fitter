@@ -142,8 +142,6 @@ def main(gal_row):
             code_snippets.skirtoutput(method=args.method,
                                       samples_df=samples_df,
                                       gal_name=gal_name)
-                
-#     no
 
 if __name__ == "__main__":
 
