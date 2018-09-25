@@ -62,11 +62,11 @@ args = parser.parse_args()
 
 os.chdir(os.getcwd())
 
-if not os.path.exists('plots'):
+if not os.path.exists('plots') and args.plot:
     os.mkdir('plots')
-if not os.path.exists('plots/sed'):
+if not os.path.exists('plots/sed') and args.plot:
     os.mkdir('plots/sed')
-if not os.path.exists('plots/corner'):
+if not os.path.exists('plots/corner') and args.plot:
     os.mkdir('plots/corner')
 if not os.path.exists('samples'):
     os.mkdir('samples')

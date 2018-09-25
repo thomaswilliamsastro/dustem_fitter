@@ -173,10 +173,10 @@ def sample(method,
         procs = cpu_count()
         
         #Run with the minimum processors that will either (a) not quite run into
-        #swap, (b) maxes out the machine or (c) 8 processes (since it doesn't scale well
+        #swap, (b) maxes out the machine or (c) 4 processes (since it doesn't scale well
         #beyond that)
         
-        processes = np.min([int(np.floor(mem/ram_footprint)),procs,8])
+        processes = np.min([int(np.floor(mem/ram_footprint)),procs,4])
     
         print('Fitting '+gal_name+' using '+str(processes)+' processes')
         
