@@ -108,6 +108,7 @@ def sample(method,
     
     obs_flux = []
     obs_error = []
+    obs_wavelengths = []
     
     global keys
     keys = []
@@ -130,29 +131,37 @@ def sample(method,
                             obs_flux.append(flux_df[key][gal_row])
                             obs_error.append(flux_df[key+'_err'][gal_row])
                             keys.append(key)  
+                            obs_wavelengths.append(filter_df[key][0])
                             
                     except:
                         
                             obs_flux.append(flux_df[key][gal_row])
                             obs_error.append(flux_df[key+'_err'][gal_row])
-                            keys.append(key)                                         
+                            keys.append(key)        
+                            obs_wavelengths.append (filter_df[key][0])                                
                 
         except KeyError:
             pass
         
     obs_flux = np.array(obs_flux)
     obs_error = np.array(obs_error)
+    obs_wavelengths = np.array(obs_wavelengths)
+    
+    idx = np.where( obs_wavelengths == np.max(obs_wavelengths) )
+    idx_key = keys[idx[0][0]]
     
     stars = general.define_stars(flux_df,
                                  gal_row,
-                                 frequency)
+                                 filter_df,
+                                 frequency,
+                                 idx_key)
     
-    #Set an initial guess for the scaling variable. Lock this to the SPIRE250 flux, which
-    #all galaxies must have
+    #Set an initial guess for the scaling variable. Lock this to the longest flux
+    #available
     
-    idx = np.where(np.abs(wavelength-filter_df['SPIRE_250'][0]) == np.min(np.abs(wavelength-filter_df['SPIRE_250'][0])))
+    idx = np.where(np.abs(wavelength-filter_df[idx_key][0]) == np.min(np.abs(wavelength-filter_df[idx_key][0])))
     
-    initial_dust_scaling = flux_df['SPIRE_250'][gal_row]/default_total[idx[0]]
+    initial_dust_scaling = flux_df[idx_key][gal_row]/default_total[idx[0]]
     
     #Read in the pickle jar if it exists, else do the fitting
 

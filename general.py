@@ -56,7 +56,9 @@ def read_sed(isrf,
 
 def define_stars(flux_df,
                  gal_row,
-                 frequency):
+                 filter_df,
+                 frequency,
+                 idx_key):
     
     #Create a blackbody of 5000K to represent the stars, and lock this
     #at the 3.6micron IRAC flux (or the 3.4 WISE flux if not available)
@@ -66,16 +68,8 @@ def define_stars(flux_df,
     wavelength = 3e8/frequency
     wavelength *= 1e6
     
-    try:
-        if not np.isnan(flux_df['Spitzer_3.6'][gal_row]):
-            idx = np.where(np.abs(wavelength-3.6) == np.min(np.abs(wavelength-3.6)))
-            ratio = flux_df['Spitzer_3.6'][gal_row]/stars[idx]
-        else:
-            idx = np.where(np.abs(wavelength-3.4) == np.min(np.abs(wavelength-3.4)))
-            ratio = flux_df['WISE_3.4'][gal_row]/stars[idx]
-    except KeyError:
-        idx = np.where(np.abs(wavelength-3.4) == np.min(np.abs(wavelength-3.4)))
-        ratio = flux_df['WISE_3.4'][gal_row]/stars[idx]
+    idx = np.where(np.abs(wavelength-filter_df[idx_key][0]) == np.min(np.abs(wavelength-filter_df[idx_key][0])))
+    ratio = flux_df[idx_key][gal_row]/stars[idx]
     
     stars *= ratio
     

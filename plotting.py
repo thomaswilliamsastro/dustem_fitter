@@ -72,12 +72,6 @@ def plot_sed(method,
         samples[:,i] = col_values
         i += 1
     
-    #Generate stars
-    
-    stars = general.define_stars(flux_df,
-                                 gal_row,
-                                 frequency)
-    
     #Pull out fluxes
     
     obs_flux = []
@@ -126,6 +120,17 @@ def plot_sed(method,
     obs_error = np.array(obs_error)
     obs_wavelength = np.array(obs_wavelength)
     obs_flag = np.array(obs_flag)
+    
+    idx = np.where( obs_wavelength[obs_flag == 0] == np.max(obs_wavelength[obs_flag == 0]) )
+    idx_key = keys[idx[0][0]]
+    
+    #Generate stars
+    
+    stars = general.define_stars(flux_df,
+                                 gal_row,
+                                 filter_df,
+                                 frequency,
+                                 idx_key)
 
     #For errorbars
     
@@ -579,13 +584,13 @@ def plot_corner(method,
     #Calculate median values to plot as 'truths' on the corner plot
     
     medians = np.median(samples,axis=0)
-    range = [0.995]*samples.shape[1]
+    samples_plot_range = [0.995]*samples.shape[1]
     
     corner.corner(samples, labels=corner_labels,
                   quantiles=[0.16,0.84],
                   show_titles=True,
                   truths=medians,
-                  range=range,
+                  range=samples_plot_range,
                   truth_color='k')
     
     plt.savefig('plots/corner/'+gal_name+'_'+method+'.png',
