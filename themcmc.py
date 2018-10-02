@@ -177,8 +177,12 @@ if __name__ == "__main__":
         
     else:
         
-        for gal_row in range(len(flux_df)):
+        for gal_row in [41520]:
             
             main(gal_row)
+        
+#         for gal_row in range(len(flux_df)):
+#             
+#             main(gal_row)
     
     print('Code complete, took %.2fm' % ( (time.time() - start_time)/60 ))

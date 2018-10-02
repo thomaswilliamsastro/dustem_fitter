@@ -147,7 +147,9 @@ def sample(method,
     obs_error = np.array(obs_error)
     obs_wavelengths = np.array(obs_wavelengths)
     
-    idx = np.where( obs_wavelengths == np.max(obs_wavelengths) )
+    #Define stars, locking the initial scaling guess to shortest wavelength
+    
+    idx = np.where( obs_wavelengths == np.min(obs_wavelengths) )
     idx_key = keys[idx[0][0]]
     
     stars = general.define_stars(flux_df,
@@ -158,6 +160,9 @@ def sample(method,
     
     #Set an initial guess for the scaling variable. Lock this to the longest flux
     #available
+    
+    idx = np.where( obs_wavelengths == np.max(obs_wavelengths) )
+    idx_key = keys[idx[0][0]]
     
     idx = np.where(np.abs(wavelength-filter_df[idx_key][0]) == np.min(np.abs(wavelength-filter_df[idx_key][0])))
     

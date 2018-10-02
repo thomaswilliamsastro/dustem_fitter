@@ -121,7 +121,7 @@ def plot_sed(method,
     obs_wavelength = np.array(obs_wavelength)
     obs_flag = np.array(obs_flag)
     
-    idx = np.where( obs_wavelength[obs_flag == 0] == np.max(obs_wavelength[obs_flag == 0]) )
+    idx = np.where( obs_wavelength[obs_flag == 0] == np.min(obs_wavelength[obs_flag == 0]) )
     idx_key = keys[idx[0][0]]
     
     #Generate stars

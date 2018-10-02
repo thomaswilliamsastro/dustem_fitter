@@ -61,7 +61,7 @@ def define_stars(flux_df,
                  idx_key):
     
     #Create a blackbody of 5000K to represent the stars, and lock this
-    #at the 3.6micron IRAC flux (or the 3.4 WISE flux if not available)
+    #to the shortest wavelength
     
     stars = 2*h*frequency**3/c**2 * (np.exp( (h*frequency)/(k*5000) ) -1)**-1
     
