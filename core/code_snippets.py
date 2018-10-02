@@ -33,7 +33,7 @@ def dustemoutput(method,
         samples[:,i] = col_values
         i += 1
     
-    with open('GRAIN_orig.DAT', 'r') as file:
+    with open('../templates/GRAIN_orig.DAT', 'r') as file:
         
         #Read in the template file
         filedata = file.read()
@@ -80,7 +80,7 @@ def dustemoutput(method,
             filedata = filedata.replace('[-5.00E-00]', '-5.00E-00')
     
     # Write the converted file out
-    with open('dustem_output/GRAIN_'+gal_name+'_'+method+'.dat', 'w') as file:
+    with open('../dustem_output/GRAIN_'+gal_name+'_'+method+'.dat', 'w') as file:
         file.write(filedata)
                     
 def skirtoutput(method,
@@ -189,7 +189,7 @@ def skirtoutput(method,
     
     #Write these new values out
     
-    with open('template.ski', 'r') as file :
+    with open('../templates/template.ski', 'r') as file :
         filedata = file.read()
         
         filedata = filedata.replace('[alpha]','-%.2f' % (alpha))
@@ -198,5 +198,5 @@ def skirtoutput(method,
         filedata = filedata.replace('[y_aSilM5]','%.11e' % (prop_factor_aSilM5))
         
         # Write the converted file out
-        with open('skirt_output/template_'+gal_name+'_'+method+'.ski', 'w') as file:
+        with open('../skirt_output/template_'+gal_name+'_'+method+'.ski', 'w') as file:
             file.write(filedata)

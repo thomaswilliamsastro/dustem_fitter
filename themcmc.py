@@ -1,184 +1,98 @@
 # -*- coding: utf-8 -*-
 """
-General purpose THEMIS MCMC fitter
+Setup and run THEMCMC
 
 @author: Tom Williams
 
-v1.00: 20180817.
+v1.00: 20181002.
 """
 
 #Ensure python3 compatibility
 from __future__ import absolute_import, print_function, division
 
-import numpy as np
-import pandas as pd
-import time
-
-#Argument parsing
-import argparse
-
-#OS I/O stuff
 import os
 import sys
 
-sys.path.append(os.getcwd())
+import pandas as pd
 
-#THEMCMC imports
+sys.path.append(os.getcwd)
 
-import themcmc_sampler
-import plotting
-import general
-import code_snippets
+from parameters import *
 
-try:
-    from schwimmbad import MPIPool
-except:
-    pass
+#Set up filters
 
-#Set up the argument parser
+print('Preparing filters')
 
-parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-                                 description='THEMCMC optional settings.')
-parser.add_argument('--method',type=str,default='default',metavar='',
-                    help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree', 'fit-z'")
-parser.add_argument('--plot',action='store_true',default=False,
-                    help="Plot SED and corner plot.")
-parser.add_argument('--units',type=str,default='flux',
-                    help="Units for the plot. Options are flux (Jy) or luminosity (Lsun)")
-parser.add_argument('--skirtoutput',action='store_true',default=False,
-                    help="Write out SKIRT mix code snippet. (N.B. does not work with multiu!)")
-parser.add_argument('--dustemoutput',action='store_true',default=False,
-                    help="Write out DustEM GRAIN.dat file (N.B. does not work with multiu!).")
-parser.add_argument('--fluxes',type=str,default='fluxes',metavar='',
-                    help="File containing 'fluxes'.csv to fit.")
-parser.add_argument('--filters',type=str,default='filters',metavar='',
-                    help="File containing 'filters'.csv to include.")
-parser.add_argument('--mpi',action='store_true',default=False,
-                    help="Run with MPI (requires Schwimmbad, and --bind-to none).")
+d = {}
 
-args = parser.parse_args()
+for filter_name in filters:
+    
+    wavelength_uncert = {'Spitzer_3.6':[3.6,0.015],
+                         'Spitzer_4.5':[4.5,0.015],
+                         'Spitzer_5.8':[5.8,0.015],
+                         'Spitzer_8.0':[8.0,0.015],
+                         'Spitzer_24':[24.0,0.004],
+                         'Spitzer_70':[70.0,0.045],
+                         'Spitzer_160':[160.0,0.05],
+                         'WISE_3.4':[3.368,0.029],
+                         'WISE_4.6':[4.618,0.034],     
+                         'WISE_12':[12.082,0.046],
+                         'WISE_22':[22.194,0.056],
+                         'PACS_70':[70.0,0.02],
+                         'PACS_100':[100.0,0.02],
+                         'PACS_160':[160.0,0.02],
+                         'SPIRE_250':[250.0,0.015],
+                         'SPIRE_350':[350.0,0.015],
+                         'SPIRE_500':[500.0,0.015],
+                         'Planck_350':[350.0,0.064],
+                         'Planck_550':[550.0,0.061],
+                         'Planck_850':[850,0.0078],
+                         'SCUBA2_450':[450.0,0.12],
+                         'SCUBA2_850':[850,0.08],
+                         'IRAS_12':[12,0.2],
+                         'IRAS_25':[25,0.2],
+                         'IRAS_60':[60,0.2],
+                         'IRAS_100':[100,0.2]}[filter_name]
+    
+    d[filter_name] = wavelength_uncert
 
-#Create folders for sample pickle jars and plots, if they don't exits
+df = pd.DataFrame(data=d)
 
-os.chdir(os.getcwd())
+df.to_csv('filters.csv')
 
-if not os.path.exists('plots') and args.plot:
-    os.mkdir('plots')
-if not os.path.exists('plots/sed') and args.plot:
-    os.mkdir('plots/sed')
-if not os.path.exists('plots/corner') and args.plot:
-    os.mkdir('plots/corner')
-if not os.path.exists('samples'):
-    os.mkdir('samples')
-if not os.path.exists('skirt_output') and args.skirtoutput:
-    os.mkdir('skirt_output')
-if not os.path.exists('dustem_output') and args.dustemoutput:
-    os.mkdir('dustem_output')
-    
-def main(gal_row):
-        
-    gal_name = flux_df['name'][gal_row]
-    
-    try:
-    
-        dist = flux_df['dist'][gal_row]
-        
-    except KeyError:
-        
-        if not args.method in ['fit-z']:               
-            raise Exception('No distance found!')              
-        else:                
-            dist = 0
-        
-    samples_df,filter_dict = themcmc_sampler.sample(method=args.method,
-                                                         flux_file=args.fluxes,
-                                                         filter_file=args.filters,
-                                                         gal_row=gal_row,
-                                                         pandas_dfs=pandas_dfs,
-                                                         mpi=args.mpi)
-        
-    if args.plot:
-        
-        if not os.path.isfile('plots/sed/'+gal_name+'_'+args.method+'.png'):
-            
-            print('Plotting SED')
-        
-            plotting.plot_sed(method=args.method,
-                              flux_df=flux_df,
-                              filter_df=filter_df,
-                              gal_row=gal_row,
-                              samples_df=samples_df,
-                              filter_dict=filter_dict,
-                              units=args.units,
-                              distance=dist)
-            
-        if not os.path.isfile('plots/corner/'+gal_name+'_'+args.method+'.png'):
-            
-            print('Plotting corner')
-            
-            plotting.plot_corner(method=args.method,
-                                 samples_df=samples_df,
-                                 gal_name=gal_name,
-                                 distance=dist)
-    
-    #Finally, write out code snippets for dustEM and SKIRT, if requested
-    
-    if args.dustemoutput:
-        
-        if not os.path.isfile('dustem_output/GRAIN_'+gal_name+'_'+args.method+'.dat'):
-        
-            print('Writing DustEM GRAIN.dat file')
-            
-            code_snippets.dustemoutput(method=args.method,
-                                       samples_df=samples_df,
-                                       gal_name=gal_name)
-                
-    if args.skirtoutput:
-        
-        if not os.path.isfile('skirt_output/template_'+gal_name+'_'+args.method+'.ski'):
-        
-            print('Writing SKIRT code snippet')
-            
-            code_snippets.skirtoutput(method=args.method,
-                                      samples_df=samples_df,
-                                      gal_name=gal_name)
+#Set up the code to run THEMCMC
 
-if __name__ == "__main__":
+command = ''
 
-    start_time = time.time()
+if mpi:
     
-    #For each galaxy, read in fluxes
+    command += 'mpirun -n '+str(mpi_processes)+' --bind-to none '
+
+command += 'python master_themcmc.py '
+
+command += '--method '+method+' '
+
+if mpi:
     
-    flux_df = pd.read_csv(args.fluxes+'.csv')
-    filter_df = pd.read_csv(args.filters+'.csv')
+    command += '--mpi '
     
-    #Read in and zip up dataframes
+if plot:
     
-    sCM20_df = pd.read_hdf('models.h5','sCM20')
-    lCM20_df = pd.read_hdf('models.h5','lCM20')
-    aSilM5_df = pd.read_hdf('models.h5','aSilM5')
-    wavelength_df = pd.read_hdf('models.h5','wavelength')
+    command += '--plot --units '+units+' '
     
-    pandas_dfs = [sCM20_df,lCM20_df,
-                  aSilM5_df,wavelength_df]
+if dustem_output:
     
-    if args.mpi:
-        
-        mpi_pool = MPIPool()
-        
-        if not mpi_pool.is_master():
-            mpi_pool.wait()
-            sys.exit(0)
-        
-        mpi_pool.map( main,
-                      range(len(flux_df)) )
-        
-        mpi_pool.close()
-        
-    else:
-        
-        for gal_row in range(len(flux_df)):
-             
-            main(gal_row)
+    command += '--dustemoutput '
     
-    print('Code complete, took %.2fm' % ( (time.time() - start_time)/60 ))
+if skirt_output:
+    
+    command += '--skirtoutput '
+    
+command += '--fluxes '+fluxes+' '
+
+os.chdir('core')
+
+if not os.path.exists('fortran_funcs.so'):
+    os.system('make all')
+
+os.system(command)
