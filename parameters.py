@@ -9,7 +9,7 @@ v1.00: 20181002.
 
 ###Input Parameters###
 
-fluxes = 'fluxes.csv' #Path to pandas dataframe containing fluxes
+fluxes = 'fluxes_m33_px.csv' #Path to pandas dataframe containing fluxes
 filters = ['Spitzer_3.6','Spitzer_4.5',
            'Spitzer_5.8','Spitzer_8.0',
            'Spitzer_24','Spitzer_70',
@@ -23,13 +23,13 @@ method = 'ascfree' #Options are default, abundfree, ascfree and fit-z
 
 ###Output Parameters###
 
-plot = True #Produce SED and corner plots
+plot = False #Produce SED and corner plots
 units = 'flux' #Units for SED plot. Either flux (Jy) or luminosity (Lsun)
 skirt_output = False #Produce a SKIRT code snippet
 dustem_output = False #Produce a DustEM code snippet
 
 ###MPI Settings###
 
-mpi = False #Run w/MPI or not
+mpi = True #Run w/MPI or not
 mpi_processes = 5 #If running MPI, use this many processes
                   #(should be number of cores/4)
