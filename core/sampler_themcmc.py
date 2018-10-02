@@ -55,17 +55,12 @@ def sample(method,
         aSilM5_df,\
         wavelength_df = pandas_dfs
     
-    sCM20_df = pd.read_hdf('models.h5','sCM20')
-    lCM20_df = pd.read_hdf('models.h5','lCM20')
-    aSilM5_df = pd.read_hdf('models.h5','aSilM5')
-    wavelength_df = pd.read_hdf('models.h5','wavelength')
-    
     #Read in the useful Pandas dataframes
     
     global flux_df,filter_df,corr_uncert_df
     
-    flux_df = pd.read_csv(flux_file+'.csv')
-    filter_df = pd.read_csv(filter_file+'.csv')
+    flux_df = pd.read_csv('../'+flux_file)
+    filter_df = pd.read_csv('../'+filter_file)
     corr_uncert_df = pd.read_csv('corr_uncert.csv')
     
     #Define the wavelength grid (given by the dustEM output)
@@ -94,7 +89,7 @@ def sample(method,
     
     for filter_name in filter_df.dtypes.index[1:]:
         
-        filter_wavelength,transmission = np.loadtxt('filters/'+filter_name+'.dat',
+        filter_wavelength,transmission = np.loadtxt('../filters/'+filter_name+'.dat',
                                          unpack=True)
         
         filter_wavelength /= 1e4
@@ -170,11 +165,11 @@ def sample(method,
     
     #Read in the pickle jar if it exists, else do the fitting
 
-    if os.path.exists('samples/'+gal_name+'_'+method+'.h5'):
+    if os.path.exists('../samples/'+gal_name+'_'+method+'.h5'):
  
         print('Reading in '+gal_name+' samples')
      
-        samples_df = pd.read_hdf('samples/'+gal_name+'_'+method+'.h5',
+        samples_df = pd.read_hdf('../samples/'+gal_name+'_'+method+'.h5',
                                  'samples')
             
     else:
@@ -370,7 +365,6 @@ def sample(method,
                                         lnprob, 
                                         args=(method,
                                               obs_flux,
-                                              obs_error,
                                               stars),
                                         pool=pool)
          
@@ -434,7 +428,7 @@ def sample(method,
                                                      ("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)",samples[:,2]),
                                                      ("$z$",samples[:,3]) ))) 
         
-        samples_df.to_hdf('samples/'+gal_name+'_'+method+'.h5',
+        samples_df.to_hdf('../samples/'+gal_name+'_'+method+'.h5',
                           'samples',mode='w')
             
     return samples_df,filter_dict
@@ -444,7 +438,6 @@ def sample(method,
 def lnlike(theta,
            method,
            obs_flux,
-           obs_error,
            stars):
 
 
@@ -522,7 +515,6 @@ def lnlike(theta,
 def lnprob(theta,
            method,
            obs_flux,
-           obs_error,
            stars):
     
     lp = priors(theta,
@@ -533,7 +525,6 @@ def lnprob(theta,
     return lp + lnlike(theta,
                        method,
                        obs_flux,
-                       obs_error,
                        stars)
 
 def priors(theta,

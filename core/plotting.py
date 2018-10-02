@@ -33,6 +33,7 @@ from fortran_funcs import trapz
 def plot_sed(method,
              flux_df,
              filter_df,
+             pandas_dfs,
              gal_row,
              samples_df,
              filter_dict,
@@ -43,10 +44,10 @@ def plot_sed(method,
     
     #Read in the DustEM grid
     
-    sCM20_df = pd.read_hdf('models.h5','sCM20')
-    lCM20_df = pd.read_hdf('models.h5','lCM20')
-    aSilM5_df = pd.read_hdf('models.h5','aSilM5')
-    wavelength_df = pd.read_hdf('models.h5','wavelength')
+    sCM20_df,\
+        lCM20_df,\
+        aSilM5_df,\
+        wavelength_df = pandas_dfs
     
     wavelength = wavelength_df['wavelength'].values.copy()
     
@@ -122,7 +123,15 @@ def plot_sed(method,
     obs_flag = np.array(obs_flag)
     
     idx = np.where( obs_wavelength[obs_flag == 0] == np.min(obs_wavelength[obs_flag == 0]) )
-    idx_key = keys[idx[0][0]]
+    
+    filtered_keys = []
+    
+    for i in range(len(obs_flag)):
+        
+        if not obs_flag[i]:
+            filtered_keys.append(keys[i])
+    
+    idx_key = filtered_keys[idx[0][0]]
     
     #Generate stars
     
@@ -501,10 +510,10 @@ def plot_sed(method,
     plt.xlim([1,1000])
     plt.ylim([-100,100])
     
-    plt.savefig('plots/sed/'+gal_name+'_'+method+'.png',
+    plt.savefig('../plots/sed/'+gal_name+'_'+method+'.png',
                 bbox_inches='tight',
                 dpi=150)
-    plt.savefig('plots/sed/'+gal_name+'_'+method+'.pdf',
+    plt.savefig('../plots/sed/'+gal_name+'_'+method+'.pdf',
                 bbox_inches='tight')
         
 def plot_corner(method,
@@ -593,10 +602,10 @@ def plot_corner(method,
                   range=samples_plot_range,
                   truth_color='k')
     
-    plt.savefig('plots/corner/'+gal_name+'_'+method+'.png',
+    plt.savefig('../plots/corner/'+gal_name+'_'+method+'.png',
                 bbox_inches='tight',
                 dpi=150)
-    plt.savefig('plots/corner/'+gal_name+'_'+method+'.pdf',
+    plt.savefig('../plots/corner/'+gal_name+'_'+method+'.pdf',
                 bbox_inches='tight')
 
 def filter_convolve(flux,
