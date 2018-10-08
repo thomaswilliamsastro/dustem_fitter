@@ -71,9 +71,9 @@ def sample(method,
     global frequency
     frequency = 3e8/(wavelength*1e-6)
     
-    default_total = sCM20_df['alpha:_sCM20:5.00,logU:0.00'].values.copy()+\
-                    lCM20_df['alpha:_sCM20:5.00,logU:0.00'].values.copy()+\
-                    aSilM5_df['alpha:_sCM20:5.00,logU:0.00'].values.copy()
+    default_total = sCM20_df['alpha_sCM20:5.00,logU:0.00'].values.copy()+\
+                    lCM20_df['alpha_sCM20:5.00,logU:0.00'].values.copy()+\
+                    aSilM5_df['alpha_sCM20:5.00,logU:0.00'].values.copy()
         
     global z
     z = z_at_value(Planck15.luminosity_distance,flux_df['dist'][gal_row]*u.Mpc)
@@ -419,6 +419,8 @@ def lnlike(theta,
             y_lCM20,\
             y_aSilM5,\
             dust_scaling = theta
+            
+        alpha = 5
     
     if method == 'ascfree':
     
