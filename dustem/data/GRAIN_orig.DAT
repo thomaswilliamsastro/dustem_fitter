@@ -8,7 +8,7 @@
 # grain type, nsize, type keywords, Mdust/MH, rho, amin, amax, alpha/a0 [, at, ac, gamma (ED)] [, au, zeta, eta (CV)]
 # cgs units
 #
-sdist
+quiet
 1.000000
 CM20  25 plaw-ed  0.170E-02  1.600E+00  0.400E-07  4900.00E-07 -5.00E-00  10.00E-07  50.0E-07  1.00E+0
 CM20  25 logn     0.630E-03  1.570E+00  0.500E-07  4900.00E-07  7.00E-07  1.00E+00

@@ -25,16 +25,21 @@ def run_dustem(alpha_isrf):
         filedata = filedata.replace('1.000000','%.6f' % 10**j)
          
         # Write the file out again
-        with open('data/GRAIN_'+str(i)+'_'+str(j)+'.DAT', 'w') as grain_file:
+        with open('data/GRAIN_%.2f_%.2f.DAT' % (i,j), 'w') as grain_file:
             grain_file.write(filedata)
      
     #Run the DustEM code
      
-    os.system('./src/dustem GRAIN_'+str(i)+'_'+str(j)+'.DAT '+str(i)+'_'+str(j)+'.RES')
+    os.system('./src/dustem GRAIN_%.2f_%.2f.DAT SED_%.2f_%.2f.RES' % (i,j,i,j))
      
     #Remove the GRAIN.DAT files
      
-    os.remove('data/GRAIN_'+str(i)+'_'+str(j)+'.DAT')
+    os.remove('data/GRAIN_%.2f_%.2f.DAT' % (i,j))
+    
+    #Move file to /dev/grid
+    
+    os.rename('out/SED_%.2f_%.2f.RES' % (i,j), 
+              '../dev/grid/SED_%.2f_%.2f.RES' % (i,j))
     
 if __name__ == '__main__':
     
@@ -70,19 +75,26 @@ if __name__ == '__main__':
         
         os.chdir('../')
         
+    #Create final grid directory if it doesn't already exist
+    
+    if not os.path.exists('../dev/grid'):
+    
+        os.mkdir('../dev/grid')
+        
     #Set up values for alpha_sCM20 and the ISRF strength
     
-    alpha = [2.6,5.4]
-    isrf = [-1, 3.5]
-    
-#     alpha = np.arange(2.6,5.41,0.01)
-#     isrf = np.arange(-1,3.51,0.01)
+    alpha = np.arange(2.6,5.41,0.01)
+    isrf = np.arange(-1,3.51,0.01)
     
     alpha_isrf = [(x,y) for x in alpha for y in isrf]
     
     #Set up multiprocessing pool with number of processors
     
-    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+    n_proc = multiprocessing.cpu_count()
+    
+    print('Using '+str(n_proc)+' processes')
+    
+    pool = multiprocessing.Pool(n_proc)
      
     pool.map(run_dustem,alpha_isrf)
     
