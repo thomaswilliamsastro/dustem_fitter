@@ -17,15 +17,32 @@ PROGRAM DUSTEM
   IMPLICIT NONE
 
   REAL (KIND=dp) t1
+  TYPE (FICH)                 :: input     != FICH ('GRAIN.DAT', 11)
+  TYPE(FICH)                  :: output   != FICH ('SED_test.RES', 18)
+
+  integer::cptArg,n
+  character(len=99)::name
+
+  n = command_argument_count()
+  !loop across options
+  do cptArg=1,n
+    call get_command_argument(cptArg,name)
+      if (cptArg == 1) then
+        input = FICH(name,11)
+      else if (cptArg == 2) then
+        output = FICH(name,18)
+      end if
+  end do
+
 
   ! WRITE (*,*) '--> Reading...'
-  CALL READ_DATA
+  CALL READ_DATA(input)
 
   ! WRITE (*,*) '--> WORKING...'
   CALL COMPUTE
 
   ! WRITE (*,*) '--> writing...'
-  CALL WRITE_DATA
+  CALL WRITE_DATA(output)
 
   CALL CPU_TIME (t1)
 

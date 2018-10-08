@@ -11,7 +11,7 @@ MODULE IN_OUT
 
 CONTAINS
 
-SUBROUTINE READ_DATA
+SUBROUTINE READ_DATA(fgrain)
 ! reads the .DAT files
 
   ! global variables modules
@@ -29,7 +29,7 @@ SUBROUTINE READ_DATA
   CHARACTER (LEN=10)          :: sub_char(20)
 
   ! data files
-  TYPE (FICH)                 :: fgrain     = FICH ('GRAIN.DAT', 11)
+  TYPE (FICH)                 :: fgrain     != FICH ('GRAIN.DAT', 11)
   TYPE (FICH)                 :: falign     = FICH ('ALIGN.DAT', 21)
   TYPE (FICH)                 :: fmix       = FICH ('MIX_', 12)
   TYPE (FICH)                 :: fpol       = FICH ('POL_', 13)
@@ -1119,7 +1119,7 @@ END SUBROUTINE READ_DATA
 
 !----------------------------------------------------------------
 
-SUBROUTINE WRITE_DATA
+SUBROUTINE WRITE_DATA(fsed)
 ! WRITEs DUSTEM outputs integrated over all sizes
 
   !global variables modules
@@ -1131,7 +1131,7 @@ SUBROUTINE WRITE_DATA
 
   IMPLICIT NONE
 
-  TYPE(FICH)                  :: fsed   = FICH ('SED.RES', 18)
+  TYPE(FICH)                  :: fsed  ! = FICH ('SED_testy.RES', 18)
   TYPE(FICH)                  :: fpsed  = FICH ('SED_POL.RES', 19)
   TYPE(FICH)                  :: fext   = FICH ('EXT.RES', 22)
   TYPE(FICH)                  :: fpext  = FICH ('EXT_POL.RES', 23)
