@@ -1131,7 +1131,7 @@ SUBROUTINE WRITE_DATA(fsed)
 
   IMPLICIT NONE
 
-  TYPE(FICH)                  :: fsed  ! = FICH ('SED_testy.RES', 18)
+  TYPE(FICH)                  :: fsed  ! = FICH ('SED.RES', 18)
   TYPE(FICH)                  :: fpsed  = FICH ('SED_POL.RES', 19)
   TYPE(FICH)                  :: fext   = FICH ('EXT.RES', 22)
   TYPE(FICH)                  :: fpext  = FICH ('EXT_POL.RES', 23)
