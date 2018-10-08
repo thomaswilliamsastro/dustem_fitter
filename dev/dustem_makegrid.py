@@ -1,58 +1,103 @@
 # -*- coding: utf-8 -*-
 """
-Create the SED grid for the varying
-small carbon grain sizes
+Create a DustEM grid
 
 @author: Tom Williams
 """
+
+#Ensure python3 compatibility
 from __future__ import absolute_import, print_function, division
+
 import os
 import numpy as np
-import subprocess
-import stat
+import multiprocessing
+import time
 
-def execute(cmd):
-    popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
-    for stdout_line in iter(popen.stdout.readline, ""):
-        yield stdout_line 
-    popen.stdout.close()
-    return_code = popen.wait()
-    if return_code:
-        raise subprocess.CalledProcessError(return_code, cmd)
-
-os.chdir('/home/daedalusdata/c1625914/dustem/data')
-
-alpha = np.arange(2.6,5.41,0.01)
-isrf = np.arange(-1,3.51,0.01)
-
-for i in alpha:
-    for j in isrf:
-        with open('GRAIN_orig.DAT', 'r') as file :
-            filedata = file.read()
-        
+def run_dustem(alpha_isrf):
+    
+    i,j = alpha_isrf
+    
+    if not os.path.exists('../dev/grid/SED_%.2f_%.2f.RES' % (i,j)):
+    
+        with open('data/GRAIN_orig.DAT', 'r') as grain_file:
+            filedata = grain_file.read()
+         
             # Replace the target string
             filedata = filedata.replace('5.00','%.2f' % i)
             filedata = filedata.replace('1.000000','%.6f' % 10**j)
-            
+             
             # Write the file out again
-            with open('GRAIN.DAT', 'w') as file:
-                file.write(filedata)
+            with open('data/GRAIN_%.2f_%.2f.DAT' % (i,j), 'w') as grain_file:
+                grain_file.write(filedata)
+         
+        #Run the DustEM code
+         
+        os.system('./src/dustem GRAIN_%.2f_%.2f.DAT SED_%.2f_%.2f.RES' % (i,j,i,j))
+         
+        #Remove the GRAIN.DAT files
+         
+        os.remove('data/GRAIN_%.2f_%.2f.DAT' % (i,j))
         
-        #Write a script to run the DustEM code
+        #Move file to /dev/grid
         
-        script_file = open('run.sh','w+')
-        script_file.write('#!/bin/csh\n')
-        script_file.write('#\n')   
-        script_file.write('../src/dustem\n')    
-        script_file.write('mv /home/daedalusdata/c1625914/dustem/out/SED.RES /home/daedalusdata/c1625914/dustem_fitter/dev/grid/SED_%.2f_%.2f.RES' %(i,j))  
-        
-        script_file.close()
-        
-        st = os.stat('./run.sh')
-        os.chmod('./run.sh', st.st_mode | stat.S_IEXEC)
-          
-        for path in execute(["./run.sh"]):
-            print(path, end="")
+        os.rename('out/SED_%.2f_%.2f.RES' % (i,j), 
+                  '../dev/grid/SED_%.2f_%.2f.RES' % (i,j))
     
-      
-print('Complete!')
+if __name__ == '__main__':
+    
+    start = time.time()
+
+    os.chdir(os.getcwd())
+    
+    #Move into the DustEM directory
+    
+    os.chdir('../dustem')
+    
+    #Check if DustEM has already been compiled
+    
+    if not os.path.exists('src/dustem'):
+    
+        #Edit DM constants.f90
+        
+        with open('src/DM_constants.f90', 'r') as constants_file:
+            filedata = constants_file.read()
+        
+        # Replace the target string
+        filedata = filedata.replace('/Users/lverstra/Desktop/dustem4.2', str(os.getcwd()))
+        
+        # Write the file out again
+        with open('src/DM_constants.f90', 'w') as constants_file:
+            constants_file.write(filedata)
+            
+        #And compile DustEM
+        
+        os.chdir('src')
+        os.system('make clean')
+        os.system('make')
+        
+        os.chdir('../')
+        
+    #Create final grid directory if it doesn't already exist
+    
+    if not os.path.exists('../dev/grid'):
+    
+        os.mkdir('../dev/grid')
+        
+    #Set up values for alpha_sCM20 and the ISRF strength
+    
+    alpha = np.arange(2.6,5.41,0.01)
+    isrf = np.arange(-1,3.51,0.01)
+    
+    alpha_isrf = [(x,y) for x in alpha for y in isrf]
+    
+    #Set up multiprocessing pool with number of processors
+    
+    n_proc = multiprocessing.cpu_count()
+    
+    print('Using '+str(n_proc)+' processes')
+    
+    pool = multiprocessing.Pool(n_proc)
+     
+    pool.map(run_dustem,alpha_isrf)
+    
+    print('Complete! Took %.2fs' % (time.time()-start))

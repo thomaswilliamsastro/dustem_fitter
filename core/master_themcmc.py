@@ -41,7 +41,7 @@ except:
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                  description='THEMCMC optional settings.')
 parser.add_argument('--method',type=str,default='default',metavar='',
-                    help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree', 'fit-z'")
+                    help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree'")
 parser.add_argument('--plot',action='store_true',default=False,
                     help="Plot SED and corner plot.")
 parser.add_argument('--units',type=str,default='flux',
@@ -83,11 +83,8 @@ def main(gal_row):
         dist = flux_df['dist'][gal_row]
         
     except KeyError:
-        
-        if not args.method in ['fit-z']:               
-            raise Exception('No distance found!')              
-        else:                
-            dist = 0
+                      
+        raise Exception('No distance found!')
         
     samples_df,filter_dict = sampler_themcmc.sample(method=args.method,
                                                          flux_file=args.fluxes,

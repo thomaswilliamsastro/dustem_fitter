@@ -3,19 +3,16 @@
 Setup and run THEMCMC
 
 @author: Tom Williams
-
-v1.00: 20181002.
 """
 
 #Ensure python3 compatibility
 from __future__ import absolute_import, print_function, division
 
 import os
-import sys
 
 import pandas as pd
 
-sys.path.append(os.getcwd)
+os.chdir(os.getcwd())
 
 from parameters import *
 

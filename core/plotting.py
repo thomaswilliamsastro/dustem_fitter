@@ -53,10 +53,8 @@ def plot_sed(method,
     
     #Take redshift into account
     
-    if method != 'fit-z':
-    
-        z = z_at_value(Planck15.luminosity_distance,flux_df['dist'][gal_row]*u.Mpc)    
-        wavelength_redshifted = wavelength * (1+z)
+    z = z_at_value(Planck15.luminosity_distance,flux_df['dist'][gal_row]*u.Mpc)    
+    wavelength_redshifted = wavelength * (1+z)
         
     frequency = 3e8/(wavelength*1e-6)
     
@@ -182,20 +180,6 @@ def plot_sed(method,
                 y_lCM20,\
                 y_aSilM5,\
                 dust_scaling = samples[np.random.randint(len(samples)),:]
-                
-        if method == 'fit-z':
-        
-            isrf,\
-                omega_star,\
-                dust_scaling,\
-                z = samples[np.random.randint(len(samples)),:]
-                
-            alpha = 5
-            y_sCM20 = 1
-            y_lCM20 = 1
-            y_aSilM5 = 1
-            
-            wavelength_redshifted = wavelength * (1+z)
                
         small_grains,\
             large_grains,\

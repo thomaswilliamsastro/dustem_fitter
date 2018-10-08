@@ -71,16 +71,12 @@ def sample(method,
     global frequency
     frequency = 3e8/(wavelength*1e-6)
     
-    default_total = sCM20_df['5.00,0.00'].values.copy()+\
-                    lCM20_df['5.00,0.00'].values.copy()+\
-                    aSilM5_df['5.00,0.00'].values.copy()
-                    
-    #If we're not fitting redshift, use the distance to calculate redshift
-    
-    if method != 'fit-z':
+    default_total = sCM20_df['alpha_sCM20:5.00,logU:0.00'].values.copy()+\
+                    lCM20_df['alpha_sCM20:5.00,logU:0.00'].values.copy()+\
+                    aSilM5_df['alpha_sCM20:5.00,logU:0.00'].values.copy()
         
-        global z
-        z = z_at_value(Planck15.luminosity_distance,flux_df['dist'][gal_row]*u.Mpc)
+    global z
+    z = z_at_value(Planck15.luminosity_distance,flux_df['dist'][gal_row]*u.Mpc)
     
     #Create a dictionary of the filters
     
@@ -324,37 +320,6 @@ def sample(method,
                             y_aSilM5_var,
                             dust_scaling_var])
                 
-        ####FIT REDSHIFT####
-        
-        if method == 'fit-z':
-            
-            #Set up the MCMC. We have 4 free parameters.
-            #ISRF strength,
-            #Stellar scaling,
-            #the overall scaling factor for the dust grains,
-            #and the redshift of the object.
-            
-            #Set the initial guesses for the slope and abundances at the default 
-            #THEMIS parameters. The overall scaling is given by the ratio to 250 micron
-            #earlier, and since we've already normalised the stellar parameter set this
-            #to 1. The ISRF is 10^0, i.e. MW default. Set the initial redshift guess to 1.
-                     
-            ndim = 4
-             
-            for i in range(nwalkers):
-                
-                isrf_var = np.random.normal(loc=0,scale=1e-2)
-                omega_star_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                dust_scaling_var = np.abs(np.random.normal(loc=initial_dust_scaling,
-                                                           scale=initial_dust_scaling*1e-2))
-                z_var = np.abs(np.random.normal(loc=1,
-                                                scale=1e-2))
-            
-                pos.append([isrf_var,
-                            omega_star_var,
-                            dust_scaling_var,
-                            z_var])
-                
         #Run this MCMC. Since emcee pickles any arguments passed to it, use as few
         #as possible and rely on global variables instead!
         
@@ -420,13 +385,6 @@ def sample(method,
                                                      ("log$_{10}$ M$_\mathregular{lCM20}$",samples[:,4]),
                                                      ("log$_{10}$ M$_\mathregular{aSilM5}$",samples[:,5]),
                                                      ("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)",samples[:,6]) )))
-            
-        if method == 'fit-z':
-        
-            samples_df = pd.DataFrame( OrderedDict( (("log$_{10}$ U",samples[:,0]),
-                                                     ("$\Omega_\\ast$",samples[:,1]),
-                                                     ("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)",samples[:,2]),
-                                                     ("$z$",samples[:,3]) ))) 
         
         samples_df.to_hdf('../samples/'+gal_name+'_'+method+'.h5',
                           'samples',mode='w')
@@ -449,7 +407,6 @@ def lnlike(theta,
             omega_star,\
             dust_scaling = theta
             
-        alpha = 5
         y_sCM20 = 1
         y_lCM20 = 1
         y_aSilM5 = 1    
@@ -461,9 +418,9 @@ def lnlike(theta,
             y_sCM20,\
             y_lCM20,\
             y_aSilM5,\
-            dust_scaling = theta     
+            dust_scaling = theta
             
-        alpha = 5  
+        alpha = 5
     
     if method == 'ascfree':
     
@@ -474,18 +431,6 @@ def lnlike(theta,
             y_lCM20,\
             y_aSilM5,\
             dust_scaling = theta
-            
-    if method == 'fit-z':
-        
-        isrf,\
-            omega_star,\
-            dust_scaling,\
-            z = theta
-            
-        alpha = 5
-        y_sCM20 = 1
-        y_lCM20 = 1
-        y_aSilM5 = 1
         
     small_grains,\
         large_grains,\
@@ -568,18 +513,6 @@ def priors(theta,
             y_lCM20,\
             y_aSilM5,\
             dust_scaling = theta
-            
-    if method == 'fit-z':
-        
-        isrf,\
-            omega_star,\
-            dust_scaling,\
-            z = theta
-            
-        alpha = 5
-        y_sCM20 = 1
-        y_lCM20 = 1
-        y_aSilM5 = 1
     
     if -1 <= isrf <= 3.5 and \
         omega_star > 0 and \

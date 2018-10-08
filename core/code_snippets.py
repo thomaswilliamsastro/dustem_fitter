@@ -165,8 +165,7 @@ def skirtoutput(method,
         y_lCM20 = 1
         y_aSilM5 = 1
             
-    idx = np.where(a<=a_t)        
-    f_ed = np.zeros(len(a))       
+    idx = np.where(a<=a_t)     
     f_ed = np.exp(-((a-a_t)/a_c)**gamma)        
     f_ed[idx] = 1        
     f_cv = (1+np.abs(zeta) * (a/a_u)**eta )**np.sign(zeta)       
@@ -189,7 +188,7 @@ def skirtoutput(method,
     
     #Write these new values out
     
-    with open('../templates/template.ski', 'r') as file :
+    with open('../templates/template.ski', 'r') as file:
         filedata = file.read()
         
         filedata = filedata.replace('[alpha]','-%.2f' % (alpha))
