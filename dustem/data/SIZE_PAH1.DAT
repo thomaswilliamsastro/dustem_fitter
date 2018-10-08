@@ -1,0 +1,22 @@
+# Size distribution of grain species
+#
+# shape (t-matrix code, 0:spheres, -1:spheroids)  eps (b/a, eps>1:oblate, eps<1: prolate)
+# Nbr of bulk materials
+# Name of bulks
+# Bulk densities in g/cm3 
+# Mass fractions for each bulk
+# Nbr of size bins
+# [ a (cm), dloga, a^4*dn/da, rho_eff, fv ] 
+# fmix mixing function for SED 
+# fv: volume fraction of bulks, rho_eff: volume mean density
+#
+ 0  1.00e+00
+ 1
+ PAH1
+ 2.2500e+00
+ 1.0000e+00
+4
+ 3.5000e-08  2.0939e-01  1.4422e-01  2.2500e+00  1.0000e+00
+ 4.3152e-08  2.0939e-01  3.8857e-01  2.2500e+00  1.0000e+00
+ 5.3204e-08  2.0939e-01  3.5636e-01  2.2500e+00  1.0000e+00
+ 6.5596e-08  2.0939e-01  1.3210e-01  2.2500e+00  1.0000e+00

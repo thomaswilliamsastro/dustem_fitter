@@ -1,0 +1,10 @@
+# DUSTEM: constants for the DCD and TLS effects
+# a_dtls       lc(nm)     c_delta
+# vt(cm/s)     P*mub^2    gamma_e(eV) 
+# omega_m(s-1) tauO(s-1)  Vo(K)       Vmin(K)      Vm(K)
+# ldtresh(microns)
+#
+5.81           1.34e+01   4.75e+02
+3.00e+05       1.40e-03   5.00e-01
+2.69e+12       1.00e-13   410.0        50.0         550.0      
+1.00e+02

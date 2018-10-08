@@ -1,0 +1,12 @@
+# DUSTEM : Gas quantities CNM from Wolfire et al 1995
+# 
+# Gas temperature (K), hydrogen density, H2 density, CR rate, G0 (if>0 supersedes GRAIN.DAT)
+# number of charge type (electrons, H+, C+, ...)
+# ion density (cm-3), mass (amu), charge, polarizability (A^3)
+# >>>>> 1st line is electron <<<<<<<
+# 
+1.00E+02  7.00E+01  0.00E+00  5.00E-17  1.00E+00
+3
+1.20E-02  5.4858E-04  -1.00  0.00
+3.00E-03  1.00794      1.00  0.67
+9.00E-03  12.0107      1.00  1.54

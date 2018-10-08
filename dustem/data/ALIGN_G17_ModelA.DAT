@@ -1,0 +1,12 @@
+# DUSTEM: definition of grain alignment
+# for each grain TYPE make sure you have the following files in ../oprop
+# Q1_TYPE.DAT and Q2_TYPE.DAT
+#
+# run keywords
+# lin (for linear), univ (for universal alignment law)
+# degree of anisotropy of the radiation : keep it to 0.
+# par (parametric alignment law) followed by parameters a_alig, p_stiff and f_max (see Guillet et al 2017)
+#
+lin                                     
+  0.00E+00
+par           1.0845369101E-01    2.7332711220E-01    1.0000000000E+00

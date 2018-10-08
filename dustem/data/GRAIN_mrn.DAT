@@ -1,0 +1,20 @@
+# DUSTEM: definition of grain populations
+# for each grain TYPE make sure you have the following files
+# Q_TYPE.DAT in code_f90/les_QABS
+# C_TYPE.DAT in code_f90/les_CAPA
+# if option(MIX) MIX_TYPE.DAT in code_f90/les_DAT
+# if option(POL) POL_TYPE.DAT in code_f90/les_DAT
+# if keyword(SIZE) SIZE_TYPE.DAT in code_f90/les_DAT
+# 
+# run keywords 
+# G0 scaling factor for radiation field
+# nr of grain types
+# grain type -  Mdust/MH - rho(g/cm3) - amin(cm) - amax(cm) - alpha - nsize
+#
+temp
+1.00D+00
+3
+PAH1	4.50D-04  2.25D+00  3.50D-08  7.51D-08  -3.50D+00  0.00D+00  10  plaw
+Gra 	2.00D-03  2.25D+00  5.00D-08  2.00D-05  -3.50D+00  0.00D+00  20  plaw
+aSil	8.00D-03  3.50D+00  5.00D-07  5.00D-05  -3.50D+00  0.00D+00  20  plaw
+#
