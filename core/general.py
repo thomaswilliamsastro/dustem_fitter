@@ -48,9 +48,9 @@ def read_sed(isrf,
     if '%.2f' % isrf in ['-0.00']:
         isrf = np.abs(isrf)
 
-    small_grains = sCM20_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
-    large_grains = lCM20_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
-    silicates = aSilM5_df['%.2f,%.2f' % (alpha,isrf)].values.copy()
+    small_grains = sCM20_df['alpha_sCM20:%.2f,logU:%.2f' % (alpha,isrf)].values.copy()
+    large_grains = lCM20_df['alpha_sCM20:%.2f,logU:%.2f' % (alpha,isrf)].values.copy()
+    silicates = aSilM5_df['alpha_sCM20:%.2f,logU:%.2f' % (alpha,isrf)].values.copy()
     
     return small_grains,large_grains,silicates
 
