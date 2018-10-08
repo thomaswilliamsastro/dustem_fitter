@@ -17,29 +17,31 @@ def run_dustem(alpha_isrf):
     
     i,j = alpha_isrf
     
-    with open('data/GRAIN_orig.DAT', 'r') as grain_file:
-        filedata = grain_file.read()
-     
-        # Replace the target string
-        filedata = filedata.replace('5.00','%.2f' % i)
-        filedata = filedata.replace('1.000000','%.6f' % 10**j)
+    if not os.path.exists('../dev/grid/SED_%.2f_%.2f.RES' % (i,j)):
+    
+        with open('data/GRAIN_orig.DAT', 'r') as grain_file:
+            filedata = grain_file.read()
          
-        # Write the file out again
-        with open('data/GRAIN_%.2f_%.2f.DAT' % (i,j), 'w') as grain_file:
-            grain_file.write(filedata)
-     
-    #Run the DustEM code
-     
-    os.system('./src/dustem GRAIN_%.2f_%.2f.DAT SED_%.2f_%.2f.RES' % (i,j,i,j))
-     
-    #Remove the GRAIN.DAT files
-     
-    os.remove('data/GRAIN_%.2f_%.2f.DAT' % (i,j))
-    
-    #Move file to /dev/grid
-    
-    os.rename('out/SED_%.2f_%.2f.RES' % (i,j), 
-              '../dev/grid/SED_%.2f_%.2f.RES' % (i,j))
+            # Replace the target string
+            filedata = filedata.replace('5.00','%.2f' % i)
+            filedata = filedata.replace('1.000000','%.6f' % 10**j)
+             
+            # Write the file out again
+            with open('data/GRAIN_%.2f_%.2f.DAT' % (i,j), 'w') as grain_file:
+                grain_file.write(filedata)
+         
+        #Run the DustEM code
+         
+        os.system('./src/dustem GRAIN_%.2f_%.2f.DAT SED_%.2f_%.2f.RES' % (i,j,i,j))
+         
+        #Remove the GRAIN.DAT files
+         
+        os.remove('data/GRAIN_%.2f_%.2f.DAT' % (i,j))
+        
+        #Move file to /dev/grid
+        
+        os.rename('out/SED_%.2f_%.2f.RES' % (i,j), 
+                  '../dev/grid/SED_%.2f_%.2f.RES' % (i,j))
     
 if __name__ == '__main__':
     

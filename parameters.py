@@ -3,8 +3,6 @@
 Parameters for THEMCMC
 
 @author: Tom Williams
-
-v1.00: 20181002.
 """
 
 ###Input Parameters###
