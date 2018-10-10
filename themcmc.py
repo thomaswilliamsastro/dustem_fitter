@@ -61,17 +61,29 @@ df.to_csv('filters.csv')
 
 command = ''
 
+#Add in MPI if requested
+
 if mpi:
     
     command += 'mpirun -n '+str(mpi_processes)+' --bind-to none '
 
 command += 'python master_themcmc.py '
 
+#Method
+
 command += '--method '+method+' '
+
+#Number of components
+
+command += '--components '+str(components)+' '
+
+#Specify MPI so we know what kind of pool to use
 
 if mpi:
     
     command += '--mpi '
+    
+#Output commands
     
 if plot:
     
@@ -88,6 +100,8 @@ if skirt_output:
 command += '--fluxes '+fluxes+' '
 
 os.chdir('core')
+
+#Compile the fortran functions if they haven't already been
 
 if not os.path.exists('fortran_funcs.so'):
     os.system('make all')

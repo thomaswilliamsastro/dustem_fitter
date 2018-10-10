@@ -77,7 +77,11 @@ if __name__ == '__main__':
         
         os.chdir('../')
         
-    #Create final grid directory if it doesn't already exist
+    #Create grid directories if they don't exist
+    
+    if not os.path.exists('out'):
+    
+        os.mkdir('out')
     
     if not os.path.exists('../dev/grid'):
     
@@ -85,8 +89,8 @@ if __name__ == '__main__':
         
     #Set up values for alpha_sCM20 and the ISRF strength
     
-    alpha = np.arange(2.6,5.41,0.01)
-    isrf = np.arange(-1,3.51,0.01)
+    alpha = np.arange(2,7.01,0.01)
+    isrf = np.arange(-2,7.01,0.01)
     
     alpha_isrf = [(x,y) for x in alpha for y in isrf]
     
@@ -100,4 +104,4 @@ if __name__ == '__main__':
      
     pool.map(run_dustem,alpha_isrf)
     
-    print('Complete! Took %.2fs' % (time.time()-start))
+    print('Complete! Took %.2fm' % ((time.time()-start)/60))

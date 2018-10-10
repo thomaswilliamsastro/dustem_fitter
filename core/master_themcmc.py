@@ -42,14 +42,16 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
                                  description='THEMCMC optional settings.')
 parser.add_argument('--method',type=str,default='default',metavar='',
                     help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree'")
+parser.add_argument('--components',type=int,default=1,metavar='',
+                    help="Number of dust components to fit.")
 parser.add_argument('--plot',action='store_true',default=False,
                     help="Plot SED and corner plot.")
 parser.add_argument('--units',type=str,default='flux',
                     help="Units for the plot. Options are flux (Jy) or luminosity (Lsun)")
 parser.add_argument('--skirtoutput',action='store_true',default=False,
-                    help="Write out SKIRT mix code snippet. (N.B. does not work with multiu!)")
+                    help="Write out SKIRT mix code snippet.")
 parser.add_argument('--dustemoutput',action='store_true',default=False,
-                    help="Write out DustEM GRAIN.dat file (N.B. does not work with multiu!).")
+                    help="Write out DustEM GRAIN.dat file.")
 parser.add_argument('--fluxes',type=str,default='fluxes',metavar='',
                     help="File containing 'fluxes' to fit.")
 parser.add_argument('--mpi',action='store_true',default=False,
@@ -87,11 +89,12 @@ def main(gal_row):
         raise Exception('No distance found!')
         
     samples_df,filter_dict = sampler_themcmc.sample(method=args.method,
-                                                         flux_file=args.fluxes,
-                                                         filter_file='filters.csv',
-                                                         gal_row=gal_row,
-                                                         pandas_dfs=pandas_dfs,
-                                                         mpi=args.mpi)
+                                                    components=args.components,
+                                                    flux_file=args.fluxes,
+                                                    filter_file='filters.csv',
+                                                    gal_row=gal_row,
+                                                    pandas_dfs=pandas_dfs,
+                                                    mpi=args.mpi)
         
     if args.plot:
         
@@ -100,6 +103,7 @@ def main(gal_row):
             print('Plotting SED')
         
             plotting.plot_sed(method=args.method,
+                              components=args.components,
                               flux_df=flux_df,
                               filter_df=filter_df,
                               pandas_dfs=pandas_dfs,
@@ -114,6 +118,7 @@ def main(gal_row):
             print('Plotting corner')
             
             plotting.plot_corner(method=args.method,
+                                 components=args.components,
                                  samples_df=samples_df,
                                  gal_name=gal_name,
                                  distance=dist)
@@ -174,7 +179,7 @@ if __name__ == "__main__":
         
     else:
         
-        for gal_row in range(len(flux_df)):
+        for gal_row in [0]:#range(len(flux_df)):
              
             main(gal_row)
     

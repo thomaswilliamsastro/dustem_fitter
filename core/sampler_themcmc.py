@@ -38,6 +38,7 @@ from fortran_funcs import covariance_matrix,trapz
 #MAIN SAMPLING FUNCTION
 
 def sample(method,
+           components,
            flux_file,
            filter_file,
            gal_row,
@@ -161,11 +162,11 @@ def sample(method,
     
     #Read in the pickle jar if it exists, else do the fitting
 
-    if os.path.exists('../samples/'+gal_name+'_'+method+'.h5'):
+    if os.path.exists('../samples/'+gal_name+'_'+method+'_'+str(components)+'comp.h5'):
  
         print('Reading in '+gal_name+' samples')
      
-        samples_df = pd.read_hdf('../samples/'+gal_name+'_'+method+'.h5',
+        samples_df = pd.read_hdf('../samples/'+gal_name+'_'+method+'_'+str(components)+'comp.h5',
                                  'samples')
             
     else:
@@ -225,30 +226,38 @@ def sample(method,
         
         ####DEFAULT THEMIS MIX####
         
+        #Set up logU for up to 4 components
+        
+        log_u_selection = [0,3,5,6]
+        
         if method == 'default':
             
-            #Set up the MCMC. We have 3 free parameters.
-            #ISRF strength,
+            #Set up the MCMC. We have 1+(2*components) free parameters.
             #Stellar scaling,
-            #and the overall scaling factor for the dust grains.
+            #ISRF strength, overall scaling factor for the dust grains for each component.
             
             #Set the initial guesses for the slope and abundances at the default 
             #THEMIS parameters. The overall scaling is given by the ratio to 250 micron
-            #earlier, and since we've already normalised the stellar parameter set this
-            #to 1. The ISRF is 10^0, i.e. MW default.
+            #earlier/number of components (assume they all contribute equally,
+            #and since we've already normalised the stellar parameter set this
+            #to 1. Log ISFR is selected from the bunch above.
                      
-            ndim = 3
+            ndim = 1+2*components
              
             for i in range(nwalkers):
                 
-                isrf_var = np.random.normal(loc=0,scale=1e-2)
-                omega_star_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                dust_scaling_var = np.abs(np.random.normal(loc=initial_dust_scaling,
-                                                           scale=initial_dust_scaling*1e-2))
+                values_var = []
+                
+                values_var.append( np.abs(np.random.normal(loc=1,scale=1e-2)) )
+                
+                for component in range(components):
+                    
+                    values_var.append(np.random.normal(loc=log_u_selection[component],
+                                                       scale=1e-2))
+                    values_var.append(np.abs(np.random.normal(loc=initial_dust_scaling/components,
+                                                              scale=initial_dust_scaling*1e-2/components)))
             
-                pos.append([isrf_var,
-                            omega_star_var,
-                            dust_scaling_var])  
+                pos.append(values_var)  
                 
         ####ALLOWING VARYING ABUNDANCES####
         
@@ -329,6 +338,7 @@ def sample(method,
                                         ndim, 
                                         lnprob, 
                                         args=(method,
+                                              components,
                                               obs_flux,
                                               stars),
                                         pool=pool)
@@ -361,11 +371,15 @@ def sample(method,
         
         # Convert samples to pandas dataframe and save out
         
-        if method == 'default':
+        samples_dict = OrderedDict()
+        samples_dict["$\Omega_\\ast$"] = samples[:,0]
         
-            samples_df = pd.DataFrame( OrderedDict( (("log$_{10}$ U",samples[:,0]),
-                                                     ("$\Omega_\\ast$",samples[:,1]),
-                                                     ("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)",samples[:,2]) )))
+        if method == 'default':
+            
+            for component in range(components):
+                
+                samples_dict["log$_{10}$ U$_"+str(component+1)+"$"] = samples[:,2*component+1]
+                samples_dict["log$_{10}$ M$_\mathregular{dust,"+str(component+1)+"}$ (M$_\odot$)"] = samples[:,2*component+2]
             
         if method == 'abundfree':
             
@@ -386,65 +400,152 @@ def sample(method,
                                                      ("log$_{10}$ M$_\mathregular{aSilM5}$",samples[:,5]),
                                                      ("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)",samples[:,6]) )))
         
-        samples_df.to_hdf('../samples/'+gal_name+'_'+method+'.h5',
+        samples_df = pd.DataFrame(samples_dict)
+        
+        samples_df.to_hdf('../samples/'+gal_name+'_'+method+'_'+str(components)+'comp.h5',
                           'samples',mode='w')
             
     return samples_df,filter_dict
         
 #EMCEE-RELATED FUNCTIONS
 
+def lnprob(theta,
+           method,
+           components,
+           obs_flux,
+           stars):
+    
+    lp = priors(theta,
+                method,
+                components)
+    
+    if not np.isfinite(lp):
+        return -np.inf
+    return lp + lnlike(theta,
+                       method,
+                       components,
+                       obs_flux,
+                       stars)
+    
+def priors(theta,
+           method,
+           components):
+    
+    #log_ISRF must be between -2 and 7.
+    #alpha_sCM20 must be between 2 and 7.
+    #Multiplicative factors must be greater than 0.
+    #Redshift must be between 0 and 15
+
+    global z
+    
+    if not 0<=z<=15:
+        return -np.inf
+    
+    omega_star = theta[0]
+    
+    if not omega_star>0:
+        return -np.inf
+    
+    for component in range(components):
+    
+        if method == 'default':
+            
+            isrf = theta[2*component+1]
+            dust_scaling = theta[2*component+2]
+            
+            if not -2<=isrf<=7 or not dust_scaling>0:
+                return -np.inf  
+            
+        if method == 'abundfree':
+            
+            isrf,\
+                omega_star,\
+                y_sCM20,\
+                y_lCM20,\
+                y_aSilM5,\
+                dust_scaling = theta    
+                
+            alpha = 5      
+        
+        if method == 'ascfree':
+        
+            isrf,\
+                omega_star,\
+                alpha,\
+                y_sCM20,\
+                y_lCM20,\
+                y_aSilM5,\
+                dust_scaling = theta
+                
+    return 0.0
+
 def lnlike(theta,
            method,
+           components,
            obs_flux,
            stars):
 
 
     global z
     
-    if method == 'default':
-        
-        isrf,\
-            omega_star,\
-            dust_scaling = theta
+    omega_star = theta[0]
+    
+    for component in range(components):
+    
+        if method == 'default':
             
-        y_sCM20 = 1
-        y_lCM20 = 1
-        y_aSilM5 = 1    
-        
-    if method == 'abundfree':
-        
-        isrf,\
-            omega_star,\
-            y_sCM20,\
-            y_lCM20,\
-            y_aSilM5,\
-            dust_scaling = theta
+            isrf = theta[2*component+1]
+            dust_scaling = theta[2*component+2]
+                
+            y_sCM20 = 1
+            y_lCM20 = 1
+            y_aSilM5 = 1    
+            alpha = 5
             
-        alpha = 5
-    
-    if method == 'ascfree':
-    
-        isrf,\
-            omega_star,\
-            alpha,\
-            y_sCM20,\
-            y_lCM20,\
-            y_aSilM5,\
-            dust_scaling = theta
+        if method == 'abundfree':
+            
+            isrf,\
+                omega_star,\
+                y_sCM20,\
+                y_lCM20,\
+                y_aSilM5,\
+                dust_scaling = theta
+                
+            alpha = 5
         
-    small_grains,\
-        large_grains,\
-        silicates = general.read_sed(isrf,
-                                     alpha,
-                                     sCM20_df,
-                                     lCM20_df,
-                                     aSilM5_df)    
+        if method == 'ascfree':
+        
+            isrf,\
+                omega_star,\
+                alpha,\
+                y_sCM20,\
+                y_lCM20,\
+                y_aSilM5,\
+                dust_scaling = theta
+            
+        small_grains,\
+            large_grains,\
+            silicates = general.read_sed(isrf,
+                                         alpha,
+                                         sCM20_df,
+                                         lCM20_df,
+                                         aSilM5_df) 
+            
+        if component == 0:
+            
+            total = dust_scaling*y_sCM20*small_grains+\
+                        dust_scaling*y_lCM20*large_grains+\
+                        dust_scaling*y_aSilM5*silicates
+                    
+        else:
+            
+            total += dust_scaling*y_sCM20*small_grains+\
+                        dust_scaling*y_lCM20*large_grains+\
+                        dust_scaling*y_aSilM5*silicates 
     
-    #Scale everything accordingly
+    #Include stars
     
-    total = dust_scaling*y_sCM20*small_grains+\
-            dust_scaling*y_lCM20*large_grains+\
-            dust_scaling*y_aSilM5*silicates+omega_star*stars
+    total += omega_star*stars
             
     filter_fluxes = filter_convolve(total,
                                     z)
@@ -456,75 +557,6 @@ def lnlike(theta,
     likelihood = -0.5*chisq
     
     return likelihood
-
-def lnprob(theta,
-           method,
-           obs_flux,
-           stars):
-    
-    lp = priors(theta,
-                method)
-    
-    if not np.isfinite(lp):
-        return -np.inf
-    return lp + lnlike(theta,
-                       method,
-                       obs_flux,
-                       stars)
-
-def priors(theta,
-           method):
-    
-    #log_ISRF must be between -1 and 3.5.
-    #alpha_sCM20 must be between 2.6 and 5.4.
-    #Multiplicative factors must be greater than 0.
-    #Redshift must be between 0 and 15
-
-    global z
-    
-    if method == 'default':
-        
-        isrf,\
-            omega_star,\
-            dust_scaling = theta
-            
-        alpha = 5
-        y_sCM20 = 1
-        y_lCM20 = 1
-        y_aSilM5 = 1        
-        
-    if method == 'abundfree':
-        
-        isrf,\
-            omega_star,\
-            y_sCM20,\
-            y_lCM20,\
-            y_aSilM5,\
-            dust_scaling = theta    
-            
-        alpha = 5      
-    
-    if method == 'ascfree':
-    
-        isrf,\
-            omega_star,\
-            alpha,\
-            y_sCM20,\
-            y_lCM20,\
-            y_aSilM5,\
-            dust_scaling = theta
-    
-    if -1 <= isrf <= 3.5 and \
-        omega_star > 0 and \
-        2.6<=alpha<=5.4 and \
-        y_sCM20 > 0 and \
-        y_lCM20 > 0 and \
-        y_aSilM5 > 0 and \
-        dust_scaling > 0 and \
-        0<=z<=15:
-        return 0.0
-    else:
-        return -np.inf
 
 def filter_convolve(flux,
                     z):
