@@ -42,10 +42,18 @@ parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFo
                                  description='THEMCMC optional settings.')
 parser.add_argument('--method',type=str,default='default',metavar='',
                     help="Method for fitting the data. Options are 'default', 'abundfree', 'ascfree'")
-parser.add_argument('--components',type=int,default=1,metavar='',
+parser.add_argument('--components',type=str,default='1',metavar='',
                     help="Number of dust components to fit.")
-parser.add_argument('--plot',action='store_true',default=False,
-                    help="Plot SED and corner plot.")
+parser.add_argument('--overwritesamples',action='store_true',default=False,
+                    help="Overwrite existing samples.")
+parser.add_argument('--plotsed',action='store_true',default=False,
+                    help="Plot SED.")
+parser.add_argument('--overwritesedplot',action='store_true',default=False,
+                    help="Overwrite existing SED plot.")
+parser.add_argument('--plotcorner',action='store_true',default=False,
+                    help="Make corner plot.")
+parser.add_argument('--overwritecorner',action='store_true',default=False,
+                    help="Overwrite existing corner plot.")
 parser.add_argument('--units',type=str,default='flux',
                     help="Units for the plot. Options are flux (Jy) or luminosity (Lsun)")
 parser.add_argument('--skirtoutput',action='store_true',default=False,
@@ -63,11 +71,11 @@ args = parser.parse_args()
 
 os.chdir(os.getcwd())
 
-if not os.path.exists('../plots') and args.plot:
+if not os.path.exists('../plots') and (args.plotsed or args.plotcorner):
     os.mkdir('../plots')
-if not os.path.exists('../plots/sed') and args.plot:
+if not os.path.exists('../plots/sed') and args.plotsed:
     os.mkdir('../plots/sed')
-if not os.path.exists('../plots/corner') and args.plot:
+if not os.path.exists('../plots/corner') and args.plotcorner:
     os.mkdir('../plots/corner')
 if not os.path.exists('../samples'):
     os.mkdir('../samples')
@@ -87,23 +95,35 @@ def main(gal_row):
     except KeyError:
                       
         raise Exception('No distance found!')
+    
+    #Parse components
+    
+    try:
+        
+        components = int(args.components)
+        
+    except:
+        
+        print('oh no')
         
     samples_df,filter_dict = sampler_themcmc.sample(method=args.method,
-                                                    components=args.components,
+                                                    components=components,
                                                     flux_file=args.fluxes,
                                                     filter_file='filters.csv',
                                                     gal_row=gal_row,
                                                     pandas_dfs=pandas_dfs,
-                                                    mpi=args.mpi)
+                                                    mpi=args.mpi,
+                                                    overwrite=args.overwritesamples)
         
-    if args.plot:
+    if args.plotsed:
         
-        if not os.path.isfile('../plots/sed/'+gal_name+'_'+args.method+'.png'):
+        if not os.path.isfile('../plots/sed/'+gal_name+'_'+args.method+'_'+str(components)+'comp.png') or\
+            args.overwritesedplot:
             
             print('Plotting SED')
         
             plotting.plot_sed(method=args.method,
-                              components=args.components,
+                              components=components,
                               flux_df=flux_df,
                               filter_df=filter_df,
                               pandas_dfs=pandas_dfs,
@@ -113,12 +133,15 @@ def main(gal_row):
                               units=args.units,
                               distance=dist)
             
-        if not os.path.isfile('../plots/corner/'+gal_name+'_'+args.method+'.png'):
+    if args.plotcorner:
+            
+        if not os.path.isfile('../plots/corner/'+gal_name+'_'+args.method+'_'+str(components)+'comp.png') or\
+            args.overwritecorner:
             
             print('Plotting corner')
             
             plotting.plot_corner(method=args.method,
-                                 components=args.components,
+                                 components=components,
                                  samples_df=samples_df,
                                  gal_name=gal_name,
                                  distance=dist)
@@ -179,7 +202,7 @@ if __name__ == "__main__":
         
     else:
         
-        for gal_row in [0]:#range(len(flux_df)):
+        for gal_row in range(len(flux_df)):
              
             main(gal_row)
     

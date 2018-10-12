@@ -77,6 +77,10 @@ command += '--method '+method+' '
 
 command += '--components '+str(components)+' '
 
+if overwrite_samples:
+    
+    command += '--overwritesamples '
+
 #Specify MPI so we know what kind of pool to use
 
 if mpi:
@@ -85,9 +89,21 @@ if mpi:
     
 #Output commands
     
-if plot:
+if plot_sed:
     
-    command += '--plot --units '+units+' '
+    command += '--plotsed --units '+units+' '
+    
+if overwrite_sed_plot:
+    
+    command += '--overwritesedplot '
+    
+if plot_corner:
+    
+    command += '--plotcorner '
+    
+if overwrite_corner_plot:
+    
+    command += '--overwritecorner '
     
 if dustem_output:
     
