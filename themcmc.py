@@ -61,21 +61,49 @@ df.to_csv('filters.csv')
 
 command = ''
 
+#Add in MPI if requested
+
 if mpi:
     
     command += 'mpirun -n '+str(mpi_processes)+' --bind-to none '
 
 command += 'python master_themcmc.py '
 
+#Method
+
 command += '--method '+method+' '
+
+#Number of components
+
+command += '--components '+str(components)+' '
+
+if overwrite_samples:
+    
+    command += '--overwritesamples '
+
+#Specify MPI so we know what kind of pool to use
 
 if mpi:
     
     command += '--mpi '
     
-if plot:
+#Output commands
     
-    command += '--plot --units '+units+' '
+if plot_sed:
+    
+    command += '--plotsed --units '+units+' '
+    
+if overwrite_sed_plot:
+    
+    command += '--overwritesedplot '
+    
+if plot_corner:
+    
+    command += '--plotcorner '
+    
+if overwrite_corner_plot:
+    
+    command += '--overwritecorner '
     
 if dustem_output:
     
@@ -88,6 +116,8 @@ if skirt_output:
 command += '--fluxes '+fluxes+' '
 
 os.chdir('core')
+
+#Compile the fortran functions if they haven't already been
 
 if not os.path.exists('fortran_funcs.so'):
     os.system('make all')

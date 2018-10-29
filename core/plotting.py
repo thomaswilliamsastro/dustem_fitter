@@ -15,6 +15,7 @@ import matplotlib
 matplotlib.rcParams['font.family'] = 'Latin Modern Roman'
 import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset'] = 'cm'
+from matplotlib.pyplot import cm
 import corner
 
 import numpy as np
@@ -31,6 +32,7 @@ import general
 from fortran_funcs import trapz
 
 def plot_sed(method,
+             components,
              flux_df,
              filter_df,
              pandas_dfs,
@@ -138,110 +140,136 @@ def plot_sed(method,
                                  filter_df,
                                  frequency,
                                  idx_key)
+    
+    samples_to_pull = 150
 
     #For errorbars
     
-    y_to_percentile_stars = []
-    y_to_percentile_small = []
-    y_to_percentile_large = []
-    y_to_percentile_silicates = []
-    y_to_percentile_total = []
+    y_to_percentile_stars = np.zeros([len(frequency),
+                                     samples_to_pull])
+    y_to_percentile_small = np.zeros([len(frequency),
+                                     samples_to_pull,
+                                     components])
+    y_to_percentile_large = np.zeros([len(frequency),
+                                     samples_to_pull,
+                                     components])
+    y_to_percentile_silicates = np.zeros([len(frequency),
+                                         samples_to_pull,
+                                         components])
+    y_to_percentile_total = np.zeros([len(frequency),
+                                     samples_to_pull,
+                                     components])
     
-    for i in range(150):
+    for i in range(samples_to_pull):
         
-        if method == 'default':
-            
-            isrf,\
-                omega_star,\
-                dust_scaling = samples[np.random.randint(len(samples)),:]
-             
-            alpha = 5    
-            y_sCM20 = 1
-            y_lCM20 = 1
-            y_aSilM5 = 1
-            
-        if method == 'abundfree':
-
-            isrf,\
-                omega_star,\
-                y_sCM20,\
-                y_lCM20,\
-                y_aSilM5,\
-                dust_scaling = samples[np.random.randint(len(samples)),:]    
-                
-            alpha = 5       
-                
+        idx = np.random.randint(len(samples))
+        
+        omega_star = samples[idx,0]
+        y_to_percentile_stars[:,i] = omega_star*stars
+        
         if method == 'ascfree':
             
-            isrf,\
-                omega_star,\
-                alpha,\
-                y_sCM20,\
-                y_lCM20,\
-                y_aSilM5,\
-                dust_scaling = samples[np.random.randint(len(samples)),:]
-               
-        small_grains,\
-            large_grains,\
-            silicates = general.read_sed(isrf,
-                                         alpha,
-                                         sCM20_df,
-                                         lCM20_df,
-                                         aSilM5_df)
+            alpha = samples[idx,1]
         
-        y = omega_star*stars   
-        y_to_percentile_stars.append(y)
+        for component in range(components):
         
-        y = y_sCM20*small_grains*dust_scaling   
-        y_to_percentile_small.append(y)
-        
-        y = y_lCM20*large_grains*dust_scaling 
-        y_to_percentile_large.append(y)
-        
-        y = y_aSilM5*silicates*dust_scaling 
-        y_to_percentile_silicates.append(y)
-        
-        y = dust_scaling*(y_sCM20*small_grains+\
-                           y_lCM20*large_grains+\
-                           y_aSilM5*silicates)+\
-                           omega_star*stars
-        y_to_percentile_total.append(y)
+            if method == 'default':
+                
+                isrf = samples[idx,2*component+1]
+                dust_scaling = samples[idx,2*component+2]
+                                    
+                y_sCM20 = 1
+                y_lCM20 = 1
+                y_aSilM5 = 1
+                alpha = 5
+                
+            if method == 'abundfree':
+    
+                isrf = samples[idx,5*component+1]
+                y_sCM20 = samples[idx,5*component+2]
+                y_lCM20 = samples[idx,5*component+3]
+                y_aSilM5 = samples[idx,5*component+4]  
+                dust_scaling = samples[idx,5*component+5]
+                 
+                alpha = 5      
+                    
+            if method == 'ascfree':
+                
+                isrf = samples[idx,5*component+2]
+                y_sCM20 = samples[idx,5*component+3]
+                y_lCM20 = samples[idx,5*component+4]
+                y_aSilM5 = samples[idx,5*component+5]  
+                dust_scaling = samples[idx,5*component+6]
+                   
+            small_grains,\
+                large_grains,\
+                silicates = general.read_sed(isrf,
+                                             alpha,
+                                             sCM20_df,
+                                             lCM20_df,
+                                             aSilM5_df)
+            
+            y = y_sCM20*small_grains*dust_scaling   
+            y_to_percentile_small[:,i,component] = y
+            
+            y = y_lCM20*large_grains*dust_scaling 
+            y_to_percentile_large[:,i,component] = y
+            
+            y = y_aSilM5*silicates*dust_scaling 
+            y_to_percentile_silicates[:,i,component] = y
+            
+            #FIX THIS, the factor of 2 is wrong!
+            
+            y = dust_scaling*(y_sCM20*small_grains+\
+                              y_lCM20*large_grains+\
+                              y_aSilM5*silicates)+\
+                              omega_star/2*stars
+            y_to_percentile_total[:,i,component] = y
         
         
     y_upper_stars = np.percentile(y_to_percentile_stars,84,
-                                  axis=0)
+                                  axis=1)
     y_lower_stars = np.percentile(y_to_percentile_stars,16,
-                                  axis=0)
+                                  axis=1)
     y_upper_small = np.percentile(y_to_percentile_small,84,
-                                  axis=0)
+                                  axis=1)
     y_lower_small = np.percentile(y_to_percentile_small,16,
-                                  axis=0)
+                                  axis=1)
     y_upper_large = np.percentile(y_to_percentile_large,84,
-                                  axis=0)
+                                  axis=1)
     y_lower_large = np.percentile(y_to_percentile_large,16,
-                                  axis=0)
+                                  axis=1)
     y_upper_silicates = np.percentile(y_to_percentile_silicates,84,
-                                  axis=0)
+                                  axis=1)
     y_lower_silicates = np.percentile(y_to_percentile_silicates,16,
-                                  axis=0)
-    y_upper = np.percentile(y_to_percentile_total,84,
-                            axis=0)
-    y_lower = np.percentile(y_to_percentile_total,16,
-                            axis=0)
+                                  axis=1)
+    y_upper_total = np.percentile(y_to_percentile_total,84,
+                            axis=1)
+    y_lower_total = np.percentile(y_to_percentile_total,16,
+                            axis=1)
     
     #And calculate the median lines
     
     y_median_stars = np.percentile(y_to_percentile_stars,50,
-                                   axis=0)
+                                   axis=1)
     y_median_small = np.percentile(y_to_percentile_small,50,
-                                   axis=0)
+                                   axis=1)
     y_median_large = np.percentile(y_to_percentile_large,50,
-                                   axis=0)
+                                   axis=1)
     y_median_silicates = np.percentile(y_to_percentile_silicates,50,
-                                       axis=0)
+                                       axis=1)
     y_median_total = np.percentile(y_to_percentile_total,50,
-                                   axis=0)
-    
+                                   axis=1)
+
+    y_upper = np.zeros(len(frequency))
+    y_lower = np.zeros(len(frequency))
+    y_median = np.zeros(len(frequency))
+
+    for i in range(components):
+        y_upper += y_upper_total[:,i]
+        y_lower += y_lower_total[:,i]
+        y_median += y_median_total[:,i]
+
     #If outputting luminosity, convert all these fluxes accordingly
     
     if units in ['luminosity']:
@@ -304,7 +332,7 @@ def plot_sed(method,
                 
     #Calculate residuals
                    
-    flux_model = filter_convolve(y_median_total,
+    flux_model = filter_convolve(y_median,
                                  wavelength,
                                  filter_dict,
                                  keys)
@@ -315,8 +343,8 @@ def plot_sed(method,
     residuals = np.array(residuals)*100
     residual_err = np.array(residual_err)*100
     
-    residual_upper = (y_upper-y_median_total)*100/y_median_total
-    residual_lower = (y_lower-y_median_total)*100/y_median_total
+    residual_upper = (y_upper-y_median)*100/y_median
+    residual_lower = (y_lower-y_median)*100/y_median
     
     fig1 = plt.figure(figsize=(10,6))
     frame1 = fig1.add_axes((.1,.3,.8,.6))
@@ -354,44 +382,64 @@ def plot_sed(method,
                         'IRAS_100':0.2}[keys[i]]
         
         obs_error[i] += calib_uncert*obs_flux[i]
-    
-    #THEMIS models
-    
+
     plt.fill_between(wavelength,y_lower_stars,y_upper_stars,
                      facecolor='m', interpolate=True,lw=0.5,
                      edgecolor='none', alpha=0.3)
-    plt.fill_between(wavelength,y_lower_small,y_upper_small,
-                     facecolor='b', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.3)
-    plt.fill_between(wavelength,y_lower_large,y_upper_large,
-                     facecolor='g', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.3)
-    plt.fill_between(wavelength,y_lower_silicates,y_upper_silicates,
-                     facecolor='r', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.3)
-    plt.fill_between(wavelength,y_lower,y_upper,
-                     facecolor='k', interpolate=True,lw=0.5,
-                     edgecolor='none', alpha=0.4)
-    
     plt.plot(wavelength,y_median_stars,
              c='m',
              ls='--',
              label='Stars')
-    plt.plot(wavelength,y_median_small,
-             c='b',
-             ls='-.',
-             label='sCM20')
-    plt.plot(wavelength,y_median_large,
-             c='g',
-             dashes=[2,2,2,2],
-             label='lCM20')
-    plt.plot(wavelength,y_median_silicates,
-             c='r',
-             dashes=[5,2,10,2],
-             label='aSilM5')
-    plt.plot(wavelength,y_median_total,
+    
+    #Dust component models
+
+    plt.fill_between(wavelength,y_lower,y_upper,
+                     facecolor='k', interpolate=True,lw=0.5,
+                     edgecolor='none', alpha=0.4)
+    plt.plot(wavelength,y_median,
              c='k',
              label='Total')
+        
+    if components == 1:
+
+        plt.fill_between(wavelength,y_lower_small[:,0],y_upper_small[:,0],
+                         facecolor='b', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.3)
+        plt.fill_between(wavelength,y_lower_large[:,0],y_upper_large[:,0],
+                         facecolor='g', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.3)
+        plt.fill_between(wavelength,y_lower_silicates[:,0],y_upper_silicates[:,0],
+                         facecolor='r', interpolate=True,lw=0.5,
+                         edgecolor='none', alpha=0.3)
+
+        plt.plot(wavelength,y_median_small[:,0],
+                 c='b',
+                 ls='-.',
+                 label='sCM20')
+        plt.plot(wavelength,y_median_large[:,0],
+                 c='g',
+                 dashes=[2,2,2,2],
+                 label='lCM20')
+        plt.plot(wavelength,y_median_silicates[:,0],
+                 c='r',
+                 dashes=[5,2,10,2],
+                 label='aSilM5')
+        
+    else:
+        
+        plot_colour = iter(cm.viridis(np.linspace(0,1,components)))
+        
+        for i in range(components):
+            
+            c = next(plot_colour)
+        
+            plt.fill_between(wavelength,y_lower_total[:,i],y_upper_total[:,i],
+                     facecolor=c, interpolate=True,lw=0.5,
+                     edgecolor='none', alpha=0.4)
+            plt.plot(wavelength,y_median_total[:,i],
+                     c=c,ls='--',
+                     label='Component '+str(i+1))
+
     
     #Observed fluxes
     
@@ -494,13 +542,14 @@ def plot_sed(method,
     plt.xlim([1,1000])
     plt.ylim([-100,100])
     
-    plt.savefig('../plots/sed/'+gal_name+'_'+method+'.png',
+    plt.savefig('../plots/sed/'+gal_name+'_'+method+'_'+str(components)+'comp.png',
                 bbox_inches='tight',
                 dpi=150)
-    plt.savefig('../plots/sed/'+gal_name+'_'+method+'.pdf',
+    plt.savefig('../plots/sed/'+gal_name+'_'+method+'_'+str(components)+'comp.pdf',
                 bbox_inches='tight')
         
 def plot_corner(method,
+                components,
                 samples_df,
                 gal_name,
                 distance):
@@ -527,69 +576,71 @@ def plot_corner(method,
         
         samples[:,i] = col_values
         i += 1
-    
-    #Start by converting the scaling factor to a hydrogen mass
-    
-    scaling_factor_idx = corner_labels.index("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)")
-    
-    samples[:,scaling_factor_idx] *= 1e-23
-    samples[:,scaling_factor_idx] *= (distance*1e6*3.0857e18)**2
-    samples[:,scaling_factor_idx] *= 1.67e-27
-    samples[:,scaling_factor_idx] /= 2e30
-    samples[:,scaling_factor_idx] *= 4*np.pi
         
-    #In the cases where we vary abundances, turn this into a more meaningful
-    #dust mass for each component
+    for component in range(components):
     
-    if method in ['ascfree','abundfree']:
+        #Start by converting the scaling factor to a hydrogen mass
         
-        idx_sCM20 = corner_labels.index("log$_{10}$ M$_\mathregular{sCM20}$")
-        idx_lCM20 = corner_labels.index("log$_{10}$ M$_\mathregular{lCM20}$")
-        idx_aSilM5 = corner_labels.index("log$_{10}$ M$_\mathregular{aSilM5}$")
+        scaling_factor_idx = corner_labels.index("log$_{10}$ M$_\mathregular{dust,"+str(component+1)+"}$ (M$_\odot$)")
         
-        corner_labels.append(r'log$_{10}$ M$_\mathregular{sCM20}$')
-        corner_labels.append(r'log$_{10}$ M$_\mathregular{lCM20}$')
-        corner_labels.append(r'log$_{10}$ M$_\mathregular{aSilM5}$')
+        samples[:,scaling_factor_idx] *= 1e-23
+        samples[:,scaling_factor_idx] *= (distance*1e6*3.0857e18)**2
+        samples[:,scaling_factor_idx] *= 1.67e-27
+        samples[:,scaling_factor_idx] /= 2e30
+        samples[:,scaling_factor_idx] *= 4*np.pi
+            
+        #In the cases where we vary abundances, turn this into a more meaningful
+        #dust mass for each component
         
-        samples[:,idx_sCM20] = dgr_sCM20*samples[:,scaling_factor_idx]*samples[:,idx_sCM20]
-        samples[:,idx_sCM20] = np.log10(samples[:,idx_sCM20])
-        samples[:,idx_lCM20] = dgr_lCM20*samples[:,scaling_factor_idx]*samples[:,idx_lCM20]
-        samples[:,idx_lCM20] = np.log10(samples[:,idx_lCM20])
-        samples[:,idx_aSilM5] = dgr_aSilM5*samples[:,scaling_factor_idx]*samples[:,idx_aSilM5]
-        samples[:,idx_aSilM5] = np.log10(samples[:,idx_aSilM5])
+        if method in ['ascfree','abundfree']:
+            
+            idx_sCM20 = corner_labels.index("log$_{10}$ M$_\mathregular{sCM20,"+str(component+1)+"}$")
+            idx_lCM20 = corner_labels.index("log$_{10}$ M$_\mathregular{lCM20,"+str(component+1)+"}$")
+            idx_aSilM5 = corner_labels.index("log$_{10}$ M$_\mathregular{aSilM5,"+str(component+1)+"}$")
+            
+            corner_labels.append(r'log$_{10}$ M$_\mathregular{sCM20,"+str(component+1)+"}$')
+            corner_labels.append(r'log$_{10}$ M$_\mathregular{lCM20,"+str(component+1)+"}$')
+            corner_labels.append(r'log$_{10}$ M$_\mathregular{aSilM5,"+str(component+1)+"}$')
+            
+            samples[:,idx_sCM20] = dgr_sCM20*samples[:,scaling_factor_idx]*samples[:,idx_sCM20]
+            samples[:,idx_sCM20] = np.log10(samples[:,idx_sCM20])
+            samples[:,idx_lCM20] = dgr_lCM20*samples[:,scaling_factor_idx]*samples[:,idx_lCM20]
+            samples[:,idx_lCM20] = np.log10(samples[:,idx_lCM20])
+            samples[:,idx_aSilM5] = dgr_aSilM5*samples[:,scaling_factor_idx]*samples[:,idx_aSilM5]
+            samples[:,idx_aSilM5] = np.log10(samples[:,idx_aSilM5])
+            
+        #Convert into total dust mass
         
-    #Finally, for all cases the final column is total dust mass
-    
-    if method == 'default':
+        if method == 'default':
+            
+            samples[:,scaling_factor_idx] = samples[:,scaling_factor_idx]*dgr_sCM20 + \
+                                            samples[:,scaling_factor_idx]*dgr_lCM20 + \
+                                            samples[:,scaling_factor_idx]*dgr_aSilM5
+            
+        if method in ['ascfree','abundfree']:
         
-        samples[:,scaling_factor_idx] = samples[:,scaling_factor_idx]*dgr_sCM20 + \
-                                        samples[:,scaling_factor_idx]*dgr_lCM20 + \
-                                        samples[:,scaling_factor_idx]*dgr_aSilM5
+            samples[:,scaling_factor_idx] = 10**samples[:,idx_sCM20] + \
+                                            10**samples[:,idx_lCM20] + \
+                                            10**samples[:,idx_aSilM5]
         
-    if method in ['ascfree','abundfree']:
+        samples[:,scaling_factor_idx] = np.log10(samples[:,scaling_factor_idx])
+        
+        #Calculate median values to plot as 'truths' on the corner plot
+        
+        medians = np.median(samples,axis=0)
+        samples_plot_range = [0.995]*samples.shape[1]
+        
+        corner.corner(samples, labels=corner_labels,
+                      quantiles=[0.16,0.84],
+                      show_titles=True,
+                      truths=medians,
+                      range=samples_plot_range,
+                      truth_color='k')
     
-        samples[:,scaling_factor_idx] = 10**samples[:,idx_sCM20] + \
-                                        10**samples[:,idx_lCM20] + \
-                                        10**samples[:,idx_aSilM5]
-    
-    samples[:,scaling_factor_idx] = np.log10(samples[:,scaling_factor_idx])
-    
-    #Calculate median values to plot as 'truths' on the corner plot
-    
-    medians = np.median(samples,axis=0)
-    samples_plot_range = [0.995]*samples.shape[1]
-    
-    corner.corner(samples, labels=corner_labels,
-                  quantiles=[0.16,0.84],
-                  show_titles=True,
-                  truths=medians,
-                  range=samples_plot_range,
-                  truth_color='k')
-    
-    plt.savefig('../plots/corner/'+gal_name+'_'+method+'.png',
+    plt.savefig('../plots/corner/'+gal_name+'_'+method+'_'+str(components)+'comp.png',
                 bbox_inches='tight',
                 dpi=150)
-    plt.savefig('../plots/corner/'+gal_name+'_'+method+'.pdf',
+    plt.savefig('../plots/corner/'+gal_name+'_'+method+'_'+str(components)+'comp.pdf',
                 bbox_inches='tight')
 
 def filter_convolve(flux,

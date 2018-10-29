@@ -17,14 +17,25 @@ filters = ['Spitzer_3.6','Spitzer_4.5',
            'SPIRE_250',
            'SCUBA2_450','SCUBA2_850'] #List of filters to include
 
-method = 'ascfree' #Options are default, abundfree, ascfree and fit-z
+###Dust Model Parameters###
+
+method = 'ascfree' #Options are default, abundfree and ascfree
+components = 2 #Number of dust components to fit
+overwrite_samples = False #Rerun the MCMC if a samples file already exists
 
 ###Output Parameters###
 
-plot = False #Produce SED and corner plots
+plot_sed = False #Produce SED and corner plots
 units = 'flux' #Units for SED plot. Either flux (Jy) or luminosity (Lsun)
+overwrite_sed_plot = True #If SED already exists, overwrite
+
+plot_corner = False
+overwrite_corner_plot = True #If corner plot already exists, overwrite
+
 skirt_output = False #Produce a SKIRT code snippet
 dustem_output = False #Produce a DustEM code snippet
+
+overwrite_plots = True #Overwrite any already created plots
 
 ###MPI Settings###
 

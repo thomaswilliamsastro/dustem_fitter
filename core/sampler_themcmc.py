@@ -38,11 +38,13 @@ from fortran_funcs import covariance_matrix,trapz
 #MAIN SAMPLING FUNCTION
 
 def sample(method,
+           components,
            flux_file,
            filter_file,
            gal_row,
            pandas_dfs,
-           mpi):
+           mpi,
+           overwrite):
     
     #Read in models
     
@@ -149,23 +151,13 @@ def sample(method,
                                  frequency,
                                  idx_key)
     
-    #Set an initial guess for the scaling variable. Lock this to the longest flux
-    #available
-    
-    idx = np.where( obs_wavelengths == np.max(obs_wavelengths) )
-    idx_key = keys[idx[0][0]]
-    
-    idx = np.where(np.abs(wavelength-filter_df[idx_key][0]) == np.min(np.abs(wavelength-filter_df[idx_key][0])))
-    
-    initial_dust_scaling = flux_df[idx_key][gal_row]/default_total[idx[0]]
-    
     #Read in the pickle jar if it exists, else do the fitting
 
-    if os.path.exists('../samples/'+gal_name+'_'+method+'.h5'):
+    if os.path.exists('../samples/'+gal_name+'_'+method+'_'+str(components)+'comp.h5') and not overwrite:
  
         print('Reading in '+gal_name+' samples')
      
-        samples_df = pd.read_hdf('../samples/'+gal_name+'_'+method+'.h5',
+        samples_df = pd.read_hdf('../samples/'+gal_name+'_'+method+'_'+str(components)+'comp.h5',
                                  'samples')
             
     else:
@@ -225,69 +217,122 @@ def sample(method,
         
         ####DEFAULT THEMIS MIX####
         
+        #Set up logU. 0 for one component, 0 and 3 for two and evenly spaced
+        #between those for more
+        
+        log_u_selection = np.linspace(0,3,components)
+        
+        #Find an initial dust scaling for each component. Lock to flux closest to
+        #particular wavelength peak
+        
+        dust_scaling = []
+        
+        for log_u in log_u_selection:
+            
+            total = sCM20_df['alpha_sCM20:5.00,logU:%.2f' % log_u].values.copy()+\
+                lCM20_df['alpha_sCM20:5.00,logU:%.2f' % log_u].values.copy()+\
+                aSilM5_df['alpha_sCM20:5.00,logU:%.2f' % log_u].values.copy()
+                
+            idx_max = np.where(total == np.max(total))[0][0]
+            
+            idx = np.where(np.abs(obs_wavelengths-wavelength[idx_max]) == np.min(np.abs(obs_wavelengths-wavelength[idx_max])))
+    
+            idx_key = keys[idx[0][0]]
+        
+            dust_scaling.append(flux_df[idx_key][gal_row]/total[idx_max])
+        
         if method == 'default':
             
-            #Set up the MCMC. We have 3 free parameters.
-            #ISRF strength,
+            #Set up the MCMC. We have 1+(2*components) free parameters.
             #Stellar scaling,
-            #and the overall scaling factor for the dust grains.
+            #ISRF strength, 
+            #overall scaling factor for the dust grains for each component.
             
-            #Set the initial guesses for the slope and abundances at the default 
-            #THEMIS parameters. The overall scaling is given by the ratio to 250 micron
-            #earlier, and since we've already normalised the stellar parameter set this
-            #to 1. The ISRF is 10^0, i.e. MW default.
+            #Initial guesses: 
+            
+            #Since we've already normalised the stellar parameter, set this to 1. 
+            
+            #Log ISFR is selected from the setup above.
+            
+            #The scaling is based on the peak of each component's SED, from above.
                      
-            ndim = 3
+            ndim = 1+2*components
              
             for i in range(nwalkers):
                 
-                isrf_var = np.random.normal(loc=0,scale=1e-2)
-                omega_star_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                dust_scaling_var = np.abs(np.random.normal(loc=initial_dust_scaling,
-                                                           scale=initial_dust_scaling*1e-2))
+                values_var = []
+                
+                values_var.append( np.abs(np.random.normal(loc=1,scale=1e-2)) )
+                
+                for component in range(components):
+                    
+                    values_var.append(np.random.normal(loc=log_u_selection[component],
+                                                       scale=1e-2))
+                    values_var.append(np.abs(np.random.normal(loc=dust_scaling[component],
+                                                              scale=1e-2*dust_scaling[component])))
             
-                pos.append([isrf_var,
-                            omega_star_var,
-                            dust_scaling_var])  
+                pos.append(values_var)  
                 
         ####ALLOWING VARYING ABUNDANCES####
         
         if method == 'abundfree':
             
-            #Set up the MCMC. We have 6 free parameters.
-            #ISRF strength,
+            #Set up the MCMC. We have 1+(5*components) free parameters.
             #Stellar scaling,
-            #deviation from default abundance of the small- and large-carbon grains
-            #and silicates,
-            #and the overall scaling factor for the dust grains.
+            #ISRF strength, 
+            #overall scaling factor for the dust grains for each component,
+            #and deviation from default abundance for each grain type.
             
-            #Set the initial guesses for the slope and abundances at the default 
-            #THEMIS parameters. The overall scaling is given by the ratio to 250 micron
-            #earlier, and since we've already normalised the stellar parameter set this
-            #to 1. The ISRF is 10^0, i.e. MW default.
+            #Initial guesses: 
+            
+            #Since we've already normalised the stellar parameter, set this to 1. 
+            
+            #Log ISFR is selected from the setup above.
+            
+            #The scaling is based on the peak of each component's SED, from above.
+             
+            #The deviations all default to 1
                      
-            ndim = 6
+            ndim = 1+5*components
              
             for i in range(nwalkers):
                 
-                isrf_var = np.random.normal(loc=0,scale=1e-2)
-                omega_star_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                y_sCM20_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                y_lCM20_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                y_aSilM5_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                dust_scaling_var = np.abs(np.random.normal(loc=initial_dust_scaling,
-                                                           scale=initial_dust_scaling*1e-2))
+                values_var = []
+                
+                values_var.append( np.abs(np.random.normal(loc=1,scale=1e-2)) )
+                
+                for component in range(components):
+                    
+                    values_var.append(np.random.normal(loc=log_u_selection[component],
+                                                       scale=1e-2))
+                    values_var.append(np.abs(np.random.normal(loc=1,scale=1e-2)))
+                    values_var.append(np.abs(np.random.normal(loc=1,scale=1e-2)))
+                    values_var.append(np.abs(np.random.normal(loc=1,scale=1e-2)))
+                    values_var.append(np.abs(np.random.normal(loc=dust_scaling[component],
+                                                              scale=1e-2*dust_scaling[component])))
             
-                pos.append([isrf_var,
-                            omega_star_var,
-                            y_sCM20_var,
-                            y_lCM20_var,
-                            y_aSilM5_var,
-                            dust_scaling_var])     
+                pos.append(values_var)  
     
         ####VARYING SMALL CARBON GRAIN SIZE DISTRIBUTION####
         
         if method == 'ascfree':
+            
+            #Set up the MCMC. We have 2+(5*components) free parameters.
+            #Stellar scaling,
+            #alpha_sCM20
+            #ISRF strength, 
+            #overall scaling factor for the dust grains for each component,
+            #and deviation from default abundance for each grain type.
+            
+            #Initial guesses: 
+            
+            #Since we've already normalised the stellar parameter, set this to 1. 
+            
+            #Log ISFR is selected from the setup above.
+            
+            #The scaling is based on the peak of each component's SED, from above.
+             
+            #The deviations all default to 1
             
             #Set up the MCMC. We have 7 free parameters.
             #ISRF strength,
@@ -299,26 +344,26 @@ def sample(method,
             #earlier, and since we've already normalised the stellar parameter set this
             #to 1. The ISRF is 10^0, i.e. MW default.
                      
-            ndim = 7
-             
+            ndim = 2+5*components
+            
             for i in range(nwalkers):
                 
-                isrf_var = np.random.normal(loc=0,scale=1e-2)
-                omega_star_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                alpha_var = np.abs(np.random.normal(loc=5,scale=1e-2*5))
-                y_sCM20_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                y_lCM20_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                y_aSilM5_var = np.abs(np.random.normal(loc=1,scale=1e-2))
-                dust_scaling_var = np.abs(np.random.normal(loc=initial_dust_scaling,
-                                                           scale=initial_dust_scaling*1e-2))
+                values_var = []
+                
+                values_var.append(np.abs(np.random.normal(loc=1,scale=1e-2)))
+                values_var.append(np.abs(np.random.normal(loc=5,scale=1e-2*5)))
+                
+                for component in range(components):
+                    
+                    values_var.append(np.random.normal(loc=log_u_selection[component],
+                                                       scale=1e-2))
+                    values_var.append(np.abs(np.random.normal(loc=1,scale=1e-2)))
+                    values_var.append(np.abs(np.random.normal(loc=1,scale=1e-2)))
+                    values_var.append(np.abs(np.random.normal(loc=1,scale=1e-2)))
+                    values_var.append(np.abs(np.random.normal(loc=dust_scaling[component],
+                                                              scale=1e-2*dust_scaling[component])))
             
-                pos.append([isrf_var,
-                            omega_star_var,
-                            alpha_var,
-                            y_sCM20_var,
-                            y_lCM20_var,
-                            y_aSilM5_var,
-                            dust_scaling_var])
+                pos.append(values_var)
                 
         #Run this MCMC. Since emcee pickles any arguments passed to it, use as few
         #as possible and rely on global variables instead!
@@ -329,12 +374,13 @@ def sample(method,
                                         ndim, 
                                         lnprob, 
                                         args=(method,
+                                              components,
                                               obs_flux,
                                               stars),
                                         pool=pool)
          
-        #500 steps for the 500 walkers, but throw away
-        #the first 250 as a burn-in
+        #Set a number of steps for the walkers, and throw away
+        #the first half as burn-in
         
         #If using MPI this gets very messy so don't use
         #tqdm
@@ -357,94 +403,216 @@ def sample(method,
             
         pool.close()
             
-        samples = sampler.chain[:, 250:, :].reshape((-1, ndim))
+        samples = sampler.chain[:, int(np.floor(nsteps/2)):, :].reshape((-1, ndim))
         
         # Convert samples to pandas dataframe and save out
         
-        if method == 'default':
+        samples_dict = OrderedDict()
+        samples_dict["$\Omega_\\ast$"] = samples[:,0]
         
-            samples_df = pd.DataFrame( OrderedDict( (("log$_{10}$ U",samples[:,0]),
-                                                     ("$\Omega_\\ast$",samples[:,1]),
-                                                     ("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)",samples[:,2]) )))
-            
-        if method == 'abundfree':
-            
-            samples_df = pd.DataFrame( OrderedDict( (("log$_{10}$ U",samples[:,0]),
-                                                     ("$\Omega_\\ast$",samples[:,1]),
-                                                     ("log$_{10}$ M$_\mathregular{sCM20}$",samples[:,2]),
-                                                     ("log$_{10}$ M$_\mathregular{lCM20}$",samples[:,3]),
-                                                     ("log$_{10}$ M$_\mathregular{aSilM5}$",samples[:,4]),
-                                                     ("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)",samples[:,5]) )))
-            
         if method == 'ascfree':
             
-            samples_df = pd.DataFrame( OrderedDict( (("log$_{10}$ U",samples[:,0]),
-                                                     ("$\Omega_\\ast$",samples[:,1]),
-                                                     ("$\\alpha_\mathregular{sCM20}$",samples[:,2]),
-                                                     ("log$_{10}$ M$_\mathregular{sCM20}$",samples[:,3]),
-                                                     ("log$_{10}$ M$_\mathregular{lCM20}$",samples[:,4]),
-                                                     ("log$_{10}$ M$_\mathregular{aSilM5}$",samples[:,5]),
-                                                     ("log$_{10}$ M$_\mathregular{dust}$ (M$_\odot$)",samples[:,6]) )))
+            samples_dict["$\\alpha_\mathregular{sCM20}$"] = samples[:,1]
+              
+        for component in range(components):
         
-        samples_df.to_hdf('../samples/'+gal_name+'_'+method+'.h5',
+            if method == 'default':
+            
+                samples_dict["log$_{10}$ U$_"+str(component+1)+"$"] = samples[:,2*component+1]
+                samples_dict["log$_{10}$ M$_\mathregular{dust,"+str(component+1)+"}$ (M$_\odot$)"] = samples[:,2*component+2]
+            
+            if method == 'abundfree':
+                
+                samples_dict["log$_{10}$ U$_"+str(component+1)+"$"] = samples[:,5*component+1]
+                samples_dict["log$_{10}$ M$_\mathregular{sCM20,"+str(component+1)+"}$"] = samples[:,5*component+2]
+                samples_dict["log$_{10}$ M$_\mathregular{lCM20,"+str(component+1)+"}$"] = samples[:,5*component+3]
+                samples_dict["log$_{10}$ M$_\mathregular{aSilM5,"+str(component+1)+"}$"] = samples[:,5*component+4]
+                samples_dict["log$_{10}$ M$_\mathregular{dust,"+str(component+1)+"}$ (M$_\odot$)"] = samples[:,5*component+5]
+            
+            if method == 'ascfree':
+                
+                samples_dict["log$_{10}$ U$_"+str(component+1)+"$"] = samples[:,5*component+2]
+                samples_dict["log$_{10}$ M$_\mathregular{sCM20,"+str(component+1)+"}$"] = samples[:,5*component+3]
+                samples_dict["log$_{10}$ M$_\mathregular{lCM20,"+str(component+1)+"}$"] = samples[:,5*component+4]
+                samples_dict["log$_{10}$ M$_\mathregular{aSilM5,"+str(component+1)+"}$"] = samples[:,5*component+5]
+                samples_dict["log$_{10}$ M$_\mathregular{dust,"+str(component+1)+"}$ (M$_\odot$)"] = samples[:,5*component+6]
+        
+        samples_df = pd.DataFrame(samples_dict)
+        
+        samples_df.to_hdf('../samples/'+gal_name+'_'+method+'_'+str(components)+'comp.h5',
                           'samples',mode='w')
             
     return samples_df,filter_dict
         
 #EMCEE-RELATED FUNCTIONS
 
-def lnlike(theta,
+def lnprob(theta,
            method,
+           components,
            obs_flux,
            stars):
-
+    
+    lp = priors(theta,
+                method,
+                components)
+    
+    if not np.isfinite(lp):
+        return -np.inf
+    return lp + lnlike(theta,
+                       method,
+                       components,
+                       obs_flux,
+                       stars)
+    
+def priors(theta,
+           method,
+           components):
+    
+    #log_ISRF must be between -2 and 7.
+    #alpha_sCM20 must be between 2 and 7.
+    #Multiplicative factors must be greater than 0.
+    #Redshift must be between 0 and 15.
+    
+    #Also insist that each component increases in ISRF
+    #strength
 
     global z
     
-    if method == 'default':
-        
-        isrf,\
-            omega_star,\
-            dust_scaling = theta
-            
-        y_sCM20 = 1
-        y_lCM20 = 1
-        y_aSilM5 = 1    
-        
-    if method == 'abundfree':
-        
-        isrf,\
-            omega_star,\
-            y_sCM20,\
-            y_lCM20,\
-            y_aSilM5,\
-            dust_scaling = theta
-            
-        alpha = 5
+    if not 0<=z<=15:
+        return -np.inf
+    
+    omega_star = theta[0]
+    
+    if not omega_star>=0:
+        return -np.inf
     
     if method == 'ascfree':
-    
-        isrf,\
-            omega_star,\
-            alpha,\
-            y_sCM20,\
-            y_lCM20,\
-            y_aSilM5,\
-            dust_scaling = theta
         
-    small_grains,\
-        large_grains,\
-        silicates = general.read_sed(isrf,
-                                     alpha,
-                                     sCM20_df,
-                                     lCM20_df,
-                                     aSilM5_df)    
+        alpha = theta[1]
+        
+        if not 2<=alpha<=7:
+            return -np.inf
     
-    #Scale everything accordingly
+    for component in range(components):
     
-    total = dust_scaling*y_sCM20*small_grains+\
-            dust_scaling*y_lCM20*large_grains+\
-            dust_scaling*y_aSilM5*silicates+omega_star*stars
+        if method == 'default':
+            
+            isrf = theta[2*component+1]
+            dust_scaling = theta[2*component+2]
+            
+            if not -2<=isrf<=7 or not dust_scaling>=0:
+                return -np.inf
+            
+            if component > 0:
+            
+                if not isrf>=theta[2*(component-1)+1]:
+                    return -np.inf
+            
+        if method == 'abundfree':
+            
+            isrf = theta[5*component+1]
+            y_sCM20 = theta[5*component+2]
+            y_lCM20 = theta[5*component+3]
+            y_aSilM5 = theta[5*component+4]
+            dust_scaling = theta[5*component+5]   
+            
+            if not -2<=isrf<=7 or not dust_scaling>=0\
+                or not y_sCM20>=0 or not y_lCM20>=0\
+                or not y_aSilM5>=0:
+                return -np.inf 
+            
+            if component > 0:
+            
+                if not isrf>=theta[5*(component-1)+1]:
+                    return -np.inf
+        
+        if method == 'ascfree':
+        
+            isrf = theta[5*component+2]
+            y_sCM20 = theta[5*component+3]
+            y_lCM20 = theta[5*component+4]
+            y_aSilM5 = theta[5*component+5]
+            dust_scaling = theta[5*component+6]   
+            
+            if not -2<=isrf<=7 or not dust_scaling>=0\
+                or not y_sCM20>=0 or not y_lCM20>=0\
+                or not y_aSilM5>=0:
+                return -np.inf 
+            
+            if component > 0:
+            
+                if not isrf>=theta[5*(component-1)+2]:
+                    return -np.inf
+                
+    return 0.0
+
+def lnlike(theta,
+           method,
+           components,
+           obs_flux,
+           stars):
+
+    global z
+    
+    omega_star = theta[0]
+    
+    if method == 'ascfree':
+        
+        alpha = theta[1]
+    
+    for component in range(components):
+    
+        if method == 'default':
+            
+            isrf = theta[2*component+1]
+            dust_scaling = theta[2*component+2]
+                
+            y_sCM20 = 1
+            y_lCM20 = 1
+            y_aSilM5 = 1    
+            alpha = 5
+            
+        if method == 'abundfree':
+            
+            isrf = theta[5*component+1]
+            y_sCM20 = theta[5*component+2]
+            y_lCM20 = theta[5*component+3]
+            y_aSilM5 = theta[5*component+4]
+            dust_scaling = theta[5*component+5]
+                
+            alpha = 5
+        
+        if method == 'ascfree':
+        
+            isrf = theta[5*component+2]
+            y_sCM20 = theta[5*component+3]
+            y_lCM20 = theta[5*component+4]
+            y_aSilM5 = theta[5*component+5]
+            dust_scaling = theta[5*component+6]
+            
+        small_grains,\
+            large_grains,\
+            silicates = general.read_sed(isrf,
+                                         alpha,
+                                         sCM20_df,
+                                         lCM20_df,
+                                         aSilM5_df) 
+            
+        if component == 0:
+            
+            total = dust_scaling*y_sCM20*small_grains+\
+                        dust_scaling*y_lCM20*large_grains+\
+                        dust_scaling*y_aSilM5*silicates
+                    
+        else:
+            
+            total += dust_scaling*y_sCM20*small_grains+\
+                        dust_scaling*y_lCM20*large_grains+\
+                        dust_scaling*y_aSilM5*silicates 
+    
+    #Include stars
+    
+    total += omega_star*stars
             
     filter_fluxes = filter_convolve(total,
                                     z)
@@ -457,94 +625,20 @@ def lnlike(theta,
     
     return likelihood
 
-def lnprob(theta,
-           method,
-           obs_flux,
-           stars):
-    
-    lp = priors(theta,
-                method)
-    
-    if not np.isfinite(lp):
-        return -np.inf
-    return lp + lnlike(theta,
-                       method,
-                       obs_flux,
-                       stars)
-
-def priors(theta,
-           method):
-    
-    #log_ISRF must be between -1 and 3.5.
-    #alpha_sCM20 must be between 2.6 and 5.4.
-    #Multiplicative factors must be greater than 0.
-    #Redshift must be between 0 and 15
-
-    global z
-    
-    if method == 'default':
-        
-        isrf,\
-            omega_star,\
-            dust_scaling = theta
-            
-        alpha = 5
-        y_sCM20 = 1
-        y_lCM20 = 1
-        y_aSilM5 = 1        
-        
-    if method == 'abundfree':
-        
-        isrf,\
-            omega_star,\
-            y_sCM20,\
-            y_lCM20,\
-            y_aSilM5,\
-            dust_scaling = theta    
-            
-        alpha = 5      
-    
-    if method == 'ascfree':
-    
-        isrf,\
-            omega_star,\
-            alpha,\
-            y_sCM20,\
-            y_lCM20,\
-            y_aSilM5,\
-            dust_scaling = theta
-    
-    if -1 <= isrf <= 3.5 and \
-        omega_star > 0 and \
-        2.6<=alpha<=5.4 and \
-        y_sCM20 > 0 and \
-        y_lCM20 > 0 and \
-        y_aSilM5 > 0 and \
-        dust_scaling > 0 and \
-        0<=z<=15:
-        return 0.0
-    else:
-        return -np.inf
-
 def filter_convolve(flux,
                     z):
     
     #Convolve this SED with the various filters we have to give
     #a monochromatic flux
- 
-    filter_fluxes = []
     
     #Account for redshift
     
     wavelength_redshifted = wavelength * (1+z)
     
-    for key in keys:
-                 
-        #Convolve MBB with filter
-        
-        filter_flux = np.interp(filter_dict[key][0],wavelength_redshifted,flux)
-                 
-        filter_fluxes.append( np.abs( (trapz(filter_dict[key][1]*filter_flux,filter_dict[key][0])/
-                                      trapz(filter_dict[key][1],filter_dict[key][0])) ) )
+    filter_fluxes = [np.abs( (trapz(filter_dict[key][1]*np.interp(filter_dict[key][0],
+                                                                  wavelength_redshifted,
+                                                                  flux),\
+                                    filter_dict[key][0])/
+                                    trapz(filter_dict[key][1],filter_dict[key][0])) ) for key in keys]
     
     return np.array(filter_fluxes)
